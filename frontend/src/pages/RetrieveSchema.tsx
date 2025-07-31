@@ -47,66 +47,43 @@ const Card = ({ className, children, ...props }: React.HTMLAttributes<HTMLDivEle
 );
 
 function RetrieveSchema({ onSelect }: { onSelect: (db: string, table: string) => void }) {
-    const [databases, setDatabases] = useState<string[]>([]);
     const [tables, setTables] = useState<string[]>([]);
-    const [selectedDb, setSelectedDb] = useState("");
     const [selectedTable, setSelectedTable] = useState("");
     const [schema, setSchema] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
 
-    // Fetch all databases
+    // Fetch all tables
     useEffect(() => {
-        axios.get("/api/list_all_database")
-            .then(res => setDatabases(res.data.databases || []))
+        axios.get("/api/list_all_tables")
+            .then(res => setTables(res.data.tables || []))
             .catch(err => {
-                setError("Error fetching databases.");
+                setError("Error fetching tables.");
             });
     }, []);
-
-    // Fetch tables when a database is selected
-    useEffect(() => {
-        if (selectedDb) {
-            axios.get(`/api/list_all_tables?db_name=${selectedDb}`)
-                .then(res => {
-                    setTables(res.data.tables || []);
-                    setSelectedTable("");
-                })
-                .catch(err => {
-                    setError("Error fetching tables.");
-                });
-        }
-    }, [selectedDb]);
-
-    const handleDbChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        const db = e.target.value;
-        setSelectedDb(db);
-        setSchema([]);
-        setError("");
-        onSelect(db, "");
-    };
 
     const handleTableChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const table = e.target.value;
         setSelectedTable(table);
-        onSelect(selectedDb, table);
+        onSelect("DataWarehouseV2_UK", table);
     };
 
     const handleSubmit = () => {
-        if (!selectedTable || !selectedDb) {
-            setError("Please select both a database and a table.");
+        if (!selectedTable) {
+            setError("Please select a table.");
             return;
         }
         setError("");
         setLoading(true);
         setSchema([]);
-        axios.get(`/api/retrieve-schema?table_name=${selectedTable}&db_name=${selectedDb}`)
+
+        axios.get(`/api/retrieve-schema?table_name=${selectedTable}`)
             .then(res => {
                 setSchema(res.data.schema || []);
                 setLoading(false);
             })
             .catch(err => {
-                setError("Failed to retrieve schema.");
+                setError("Error retrieving schema.");
                 setLoading(false);
             });
     };
@@ -122,7 +99,7 @@ function RetrieveSchema({ onSelect }: { onSelect: (db: string, table: string) =>
                     <div className="flex justify-between items-center">
                         <div className="flex items-center gap-3">
                             <Database className="h-8 w-8 text-[#BF2A2D]" />
-                            <h1 className="text-2xl font-bold text-[#163E5D]">Database Schema Explorer</h1>
+                            <h1 className="text-2xl font-bold text-[#163E5D]">Retrieve Schema</h1>
                         </div>
                         <Link to='/'>
                             <img src={Logo} alt="Logo" width={150} height={106} className="hover:scale-105 transition-transform duration-200" />
@@ -131,63 +108,120 @@ function RetrieveSchema({ onSelect }: { onSelect: (db: string, table: string) =>
                 </div>
             </div>
 
-            <div className="container mx-auto space-y-6 p-4">
-                <Card className="max-w-3xl mx-auto mt-8 p-6">
-                    <div className="flex gap-4 items-end mb-4">
-                        <div className="flex-1">
-                            <label className="text-[#163E5D] font-semibold">Select Database:</label>
-                            <select
-                                value={selectedDb}
-                                onChange={handleDbChange}
-                                className="w-full border border-[#2F82C3] p-2 rounded-lg mt-1 text-[#163E5D] focus:ring-2 focus:ring-[#BF2A2D]"
-                            >
-                                <option value="">Choose Database</option>
-                                {databases.map((db, i) => <option key={i} value={db}>{db}</option>)}
-                            </select>
-                        </div>
-                        <div className="flex-1">
-                            <label className="text-[#163E5D] font-semibold">Select Table:</label>
-                            <select
-                                value={selectedTable}
-                                onChange={handleTableChange}
-                                disabled={!selectedDb}
-                                className="w-full border border-[#2F82C3] p-2 rounded-lg mt-1 text-[#163E5D] disabled:bg-gray-100 focus:ring-2 focus:ring-[#BF2A2D]"
-                            >
-                                <option value="">Choose Table</option>
-                                {tables.map((table, i) => <option key={i} value={table}>{table}</option>)}
-                            </select>
-                        </div>
-                        <Button
-                            onClick={handleSubmit}
-                            disabled={!selectedTable || loading}
-                            className="min-w-[120px]"
-                        >
-                            {loading ? "Loading..." : "Retrieve Schema"}
-                        </Button>
-                    </div>
-                    {error && <div className="mt-4 text-red-600">{error}</div>}
+            {/* Main Content */}
+            <div className="container mx-auto px-6 py-8">
+                <div className="max-w-4xl mx-auto space-y-6">
+                    <Card>
+                        <div className="p-6">
+                            <h2 className="text-xl font-semibold text-[#163E5D] mb-4">SQL Server Database Schema</h2>
+                            <p className="text-gray-600 mb-6">Database: DataWarehouseV2_UK</p>
+                            
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Select Table
+                                    </label>
+                                    <select
+                                        value={selectedTable}
+                                        onChange={handleTableChange}
+                                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#BF2A2D] focus:border-transparent"
+                                    >
+                                        <option value="">Choose a table...</option>
+                                        {tables.map((table, index) => (
+                                            <option key={index} value={table}>
+                                                {table}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
 
-                    {schema.length > 0 && (
-                        <div className="bg-white shadow-md rounded-lg border border-blue-200 overflow-auto max-h-[330px] mt-6">
-                            <table className="w-full text-left table-auto">
-                                <thead className="bg-blue-100 sticky top-0">
-                                    <tr>
-                                        <th className="px-6 py-3 text-[#163E5D] font-semibold">Column Name</th>
-                                        <th className="px-6 py-3 text-[#163E5D] font-semibold">Data Type</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {schema.map((row, i) => (
-                                        <tr key={i} className="hover:bg-blue-50">
-                                            <td className="px-6 py-3 border-t border-blue-100">{row.column_name}</td>
-                                            <td className="px-6 py-3 border-t border-blue-100">{row.type}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                                <Button onClick={handleSubmit} disabled={!selectedTable || loading}>
+                                    {loading ? "Loading..." : "Retrieve Schema"}
+                                </Button>
+
+                                {error && (
+                                    <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-800">
+                                        {error}
+                                    </div>
+                                )}
+
+                                {schema.length > 0 && (
+                                    <div className="mt-6">
+                                        <h3 className="text-lg font-semibold text-[#163E5D] mb-4">
+                                            Schema for {selectedTable}
+                                        </h3>
+                                        <div className="overflow-x-auto">
+                                            <table className="min-w-full bg-white border border-gray-200 rounded-lg">
+                                                <thead className="bg-gray-50">
+                                                    <tr>
+                                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                            Column Name
+                                                        </th>
+                                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                            Data Type
+                                                        </th>
+                                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                            Nullable
+                                                        </th>
+                                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                            Default Value
+                                                        </th>
+                                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                            Primary Key
+                                                        </th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="bg-white divide-y divide-gray-200">
+                                                    {schema.map((column, index) => (
+                                                        <tr key={index} className="hover:bg-gray-50">
+                                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                                                {column.column_name}
+                                                            </td>
+                                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                                {column.type}
+                                                            </td>
+                                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                                {column.notnull === 'YES' ? 'No' : 'Yes'}
+                                                            </td>
+                                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                                {column.default_value || '-'}
+                                                            </td>
+                                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                                {column.primary_key ? 'Yes' : 'No'}
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
                         </div>
-                    )}
-                </Card>
+                    </Card>
+
+                    {/* Navigation */}
+                    <div className="flex justify-center gap-4">
+                        <Link to="/database-form">
+                            <Button variant="secondary">
+                                <Database className="h-4 w-4" />
+                                Database Connection
+                            </Button>
+                        </Link>
+                        <Link to="/sql-query-executor">
+                            <Button variant="outline">
+                                <Database className="h-4 w-4" />
+                                SQL Query Executor
+                            </Button>
+                        </Link>
+                        <Link to="/chat">
+                            <Button variant="outline">
+                                <Database className="h-4 w-4" />
+                                Chat Interface
+                            </Button>
+                        </Link>
+                    </div>
+                </div>
             </div>
         </div>
     );

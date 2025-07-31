@@ -7,3 +7,4 @@ pydantic>=2.10.0
 pandas>=2.0.0
 openpyxl>=3.1.0
 python-multipart
+pyodbc>=4.0.39

@@ -3,7 +3,7 @@ import axios from "axios";
 import background from '../assets/windmills-snowy-landscape.jpg';
 import Logo from '../assets/logo-paperchase.png';
 import { Link } from "react-router";
-import { Database } from "lucide-react";
+import { Database, Server, CheckCircle } from "lucide-react";
 
 // --- Styled Button and Utility ---
 const Button = React.forwardRef<
@@ -47,35 +47,65 @@ const Card = ({ className, children, ...props }: React.HTMLAttributes<HTMLDivEle
 );
 
 function SqlQueryExecutor() {
-    const [databases, setDatabases] = useState<string[]>([]);
-    const [selectedDb, setSelectedDb] = useState("");
+    const [tables, setTables] = useState<string[]>([]);
+    const [selectedTable, setSelectedTable] = useState("");
     const [query, setQuery] = useState("");
     const [result, setResult] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
+    const [message, setMessage] = useState("");
+    const [connectionInfo, setConnectionInfo] = useState<{
+        server: string;
+        database: string;
+        status: string;
+    } | null>(null);
 
     useEffect(() => {
-        axios.get("/api/list_all_database")
-            .then(res => setDatabases(res.data.databases || []))
-            .catch(() => setError("Error fetching databases."));
+        // Fetch connection info
+        axios.get("/api/test-connection")
+            .then(res => {
+                if (res.data.status === 'connected') {
+                    setConnectionInfo({
+                        server: res.data.server || "10.0.40.20",
+                        database: res.data.database || "DataWarehouseV2_UK",
+                        status: res.data.status
+                    });
+                }
+            })
+            .catch(() => {
+                // If connection fails, set default info
+                setConnectionInfo({
+                    server: "10.0.40.20",
+                    database: "DataWarehouseV2_UK",
+                    status: "disconnected"
+                });
+            });
+
+        // Fetch tables
+        axios.get("/api/list_all_tables")
+            .then(res => setTables(res.data.tables || []))
+            .catch(() => setError("Error fetching tables."));
     }, []);
 
     const handleSubmit = async () => {
-        if (!selectedDb || !query.trim()) {
-            setError("Please select a database and enter a SQL query.");
+        if (!selectedTable || !query.trim()) {
+            setError("Please select a table and enter a SQL query.");
             return;
         }
-        const payload = { db_name: selectedDb, query: query.trim() };
+        const payload = { table_name: selectedTable, query: query.trim() };
         setError("");
+        setMessage("");
         setLoading(true);
         setResult([]);
         try {
             const response = await axios.post("/api/sql-query-executor", payload);
             const rows = response.data.data || [];
+            const responseMessage = response.data.message || "";
             setResult(rows);
+            setMessage(responseMessage);
         } catch (err: any) {
-            const message = err?.response?.data?.message || "Failed to execute query.";
-            setError(message);
+            const errorMessage = err?.response?.data?.detail || "Failed to execute query.";
+            setError(errorMessage);
         } finally {
             setLoading(false);
         }
@@ -101,79 +131,145 @@ function SqlQueryExecutor() {
                 </div>
             </div>
 
-            <div className="container mx-auto space-y-6 p-4">
-                <Card className="max-w-3xl mx-auto mt-8 p-6">
-                    <div className="mb-4">
-                        <label className="text-[#163E5D] font-semibold">Select Database:</label>
-                        <select
-                            value={selectedDb}
-                            onChange={(e) => setSelectedDb(e.target.value)}
-                            className="w-full border border-[#2F82C3] p-2 rounded-lg mt-1 text-[#163E5D] focus:ring-2 focus:ring-[#BF2A2D]"
-                        >
-                            <option value="">Choose Database</option>
-                            {databases.map((db, i) => (
-                                <option key={i} value={db}>{db}</option>
-                            ))}
-                        </select>
-                    </div>
-
-                    <div className="mb-4">
-                        <label className="block text-[#163E5D] font-semibold mb-2">SQL Query:</label>
-                        <textarea
-                            value={query}
-                            onChange={(e) => setQuery(e.target.value)}
-                            rows={2}
-                            className="w-full border-2 border-[#2F82C3] rounded-lg px-3 py-2 bg-blue-50 text-[#163E5D] focus:ring-2 focus:ring-[#BF2A2D]"
-                            placeholder="Enter your SQL query here..."
-                        ></textarea>
-                    </div>
-
-                    <Button
-                        onClick={handleSubmit}
-                        disabled={loading}
-                    >
-                        {loading ? "Executing..." : "Run Query"}
-                    </Button>
-
-                    {error && (
-                        <div className="mt-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md">
-                            {error}
-                        </div>
-                    )}
-
-                    {result.length > 0 && (
-                        <div className="bg-white rounded-lg shadow-md border mt-4 border-blue-200 overflow-auto mx-auto">
-                            <div className="bg-[linear-gradient(90deg,#2F82C3_0%,#163E5D_100%)] px-6 py-4">
-                                <h3 className="text-white font-semibold text-lg">Query Results</h3>
-                                <p className="text-blue-100 text-sm">{result.length} rows returned</p>
-                            </div>
-                            <div className="overflow-x-auto max-h-[400px] overflow-y-auto">
-                                <table className="min-w-full text-sm text-left">
-                                    <thead className="bg-blue-100">
-                                        <tr>
-                                            {Object.keys(result[0]).map((col, idx) => (
-                                                <th key={idx} className="px-6 py-3 text-[#163E5D] font-semibold border-b border-blue-200">
-                                                    {col}
-                                                </th>
-                                            ))}
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {result.map((row, rowIndex) => (
-                                            <tr key={rowIndex} className="hover:bg-blue-50">
-                                                {Object.values(row).map((val, colIndex) => (
-                                                    <td key={colIndex} className="px-6 py-3 border-b border-blue-100 text-gray-800">
-                                                        {String(val)}
-                                                    </td>
-                                                ))}
-                                            </tr>
+            {/* Main Content */}
+            <div className="container mx-auto px-6 py-8">
+                <div className="max-w-6xl mx-auto space-y-6">
+                    <Card>
+                        <div className="p-6">
+                            <h2 className="text-xl font-semibold text-[#163E5D] mb-4">SQL Server Query Executor</h2>
+                            
+                            {/* Current Connection Info */}
+                            {connectionInfo && (
+                                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <CheckCircle className="h-4 w-4 text-blue-600" />
+                                        <span className="font-medium text-blue-800">Current Connection</span>
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                                        <div className="flex items-center gap-2">
+                                            <Server className="h-4 w-4 text-gray-500" />
+                                            <span className="text-gray-600">Server:</span>
+                                            <span className="font-medium">{connectionInfo.server}</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <Database className="h-4 w-4 text-gray-500" />
+                                            <span className="text-gray-600">Database:</span>
+                                            <span className="font-medium">{connectionInfo.database}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                            
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Select Table
+                                    </label>
+                                    <select
+                                        value={selectedTable}
+                                        onChange={(e) => setSelectedTable(e.target.value)}
+                                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#BF2A2D] focus:border-transparent"
+                                    >
+                                        <option value="">Choose a table...</option>
+                                        {tables.map((table, index) => (
+                                            <option key={index} value={table}>
+                                                {table}
+                                            </option>
                                         ))}
-                                    </tbody>
-                                </table>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        SQL Query
+                                    </label>
+                                    <textarea
+                                        value={query}
+                                        onChange={(e) => setQuery(e.target.value)}
+                                        placeholder="Enter your SQL query here..."
+                                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#BF2A2D] focus:border-transparent h-32 resize-none"
+                                    />
+                                </div>
+
+                                <Button onClick={handleSubmit} disabled={!selectedTable || !query.trim() || loading}>
+                                    {loading ? "Executing..." : "Execute Query"}
+                                </Button>
+
+                                {error && (
+                                    <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-800">
+                                        {error}
+                                    </div>
+                                )}
+
+                                {result.length > 0 && (
+                                    <div className="mt-6">
+                                        <h3 className="text-lg font-semibold text-[#163E5D] mb-4">
+                                            Query Results ({result.length} rows)
+                                        </h3>
+                                        
+                                        {/* Message Display */}
+                                        {message && (
+                                            <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                                                <div className="flex items-center gap-2">
+                                                    <CheckCircle className="h-4 w-4 text-green-600" />
+                                                    <span className="text-green-800 font-medium">Query Message:</span>
+                                                </div>
+                                                <p className="text-green-700 mt-1">{message}</p>
+                                            </div>
+                                        )}
+                                        
+                                        <div className="overflow-x-auto">
+                                            <table className="min-w-full bg-white border border-gray-200 rounded-lg">
+                                                <thead className="bg-gray-50">
+                                                    <tr>
+                                                        {Object.keys(result[0] || {}).map((column, index) => (
+                                                            <th key={index} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                                {column}
+                                                            </th>
+                                                        ))}
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="bg-white divide-y divide-gray-200">
+                                                    {result.map((row, rowIndex) => (
+                                                        <tr key={rowIndex} className="hover:bg-gray-50">
+                                                            {Object.values(row).map((value, colIndex) => (
+                                                                <td key={colIndex} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                                    {String(value || '')}
+                                                                </td>
+                                                            ))}
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
-                    )}
-                </Card>
+                    </Card>
+
+                    {/* Navigation */}
+                    <div className="flex justify-center gap-4">
+                        <Link to="/database-form">
+                            <Button variant="secondary">
+                                <Database className="h-4 w-4" />
+                                Database Connection
+                            </Button>
+                        </Link>
+                        <Link to="/retrieve-schema">
+                            <Button variant="outline">
+                                <Database className="h-4 w-4" />
+                                View Schema
+                            </Button>
+                        </Link>
+                        <Link to="/chat">
+                            <Button variant="outline">
+                                <Database className="h-4 w-4" />
+                                Chat Interface
+                            </Button>
+                        </Link>
+                    </div>
+                </div>
             </div>
         </div>
     );

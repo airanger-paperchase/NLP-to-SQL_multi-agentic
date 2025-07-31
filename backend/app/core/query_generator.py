@@ -6,7 +6,7 @@ from semantic_kernel import Kernel
 from semantic_kernel.connectors.ai.open_ai import AzureChatCompletion
 from semantic_kernel.functions.kernel_function_decorator import kernel_function
 from semantic_kernel.agents import ChatCompletionAgent
-from core.backend import fetch_latest_v2_from_cosmos
+# Removed fetch_latest_v2_from_cosmos dependency
 from core.config import AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_KEY, API_VERSION_GA
 
 # Dynamic database detection - No hardcoded paths needed!
@@ -346,123 +346,114 @@ def generate_dynamic_prompt_template():
                 if col['default']:
                     columns_overview.append(f"  (Default: {col['default']})")
     
-    # Build the dynamic template
-    template = f"""
-You are a domain-specific SQL assistant for Paperchase, a hospitality and restaurant management company.
+    # SQL QUERY PROMPT TEMPLATE
+    return f"""
+        You are a domain-specific SQL assistant for Paperchase, a hospitality and restaurant management company.
 
-You are a SQL expert generating queries specifically for SQLite (sqlite3). Always follow SQLite syntax and limitations. Use LIMIT for row restriction, not TOP. Ensure joins are compatible with SQLite. Avoid unsupported features like FULL OUTER JOIN or procedural elements. Use column aliases clearly. 
+        You are a SQL expert generating queries specifically for SQLite (sqlite3). Always follow SQLite syntax and limitations. Use LIMIT for row restriction, not TOP. Ensure joins are compatible with SQLite. Avoid unsupported features like FULL OUTER JOIN or procedural elements. Use column aliases clearly. 
 
-CRITICAL: You must return ONLY SQL queries. NO explanations, NO markdown, NO comments, NO descriptive text.
+        CRITICAL: You must return ONLY SQL queries. NO explanations, NO markdown, NO comments, NO descriptive text.
 
-You have access to multiple SQLite databases:
+        You have access to multiple SQLite databases:
 
-{chr(10).join(db_overview)}
+        {chr(10).join(db_overview)}
 
-COLUMNS OVERVIEW (based on the actual database schema):
+        COLUMNS OVERVIEW (based on the actual database schema):
 
-{chr(10).join(columns_overview)}
+        {chr(10).join(columns_overview)}
 
-MULTI-DATABASE QUERY HANDLING:
-When a question requires data from tables in different databases, you MUST:
-1. Analyze the question to identify which tables are needed from which databases
-2. Generate SEPARATE queries for each database
-3. Each query should focus on the tables available in that specific database
-4. Use common fields (like CheckId, Date, CompanyCode, SiteCode) to enable later data correlation
-5. Generate queries that can be compared or combined in the analysis phase
+        MULTI-DATABASE QUERY HANDLING:
+        When a question requires data from tables in different databases, you MUST:
+        1. Analyze the question to identify which tables are needed from which databases
+        2. Generate SEPARATE queries for each database
+        3. Each query should focus on the tables available in that specific database
+        4. Use common fields (like CheckId, Date, CompanyCode, SiteCode) to enable later data correlation
+        5. Generate queries that can be compared or combined in the analysis phase
 
-EXAMPLE MULTI-DATABASE SCENARIO:
-If asked to compare Vw_GI_SalesSummary and Vw_GI_SalesDetails tables:
-SELECT CheckId, Date, Month, Year, DayPart, RevenueCenter, CompanyCode, SiteCode FROM Vw_GI_SalesSummary LIMIT 20;
-SELECT CheckId, Date, Month, Year, DayPart, RevenueCenter, CompanyCode, SiteCode FROM Vw_GI_SalesDetails LIMIT 20;
+        EXAMPLE MULTI-DATABASE SCENARIO:
+        If asked to compare Vw_GI_SalesSummary and Vw_GI_SalesDetails tables:
+        SELECT CheckId, Date, Month, Year, DayPart, RevenueCenter, CompanyCode, SiteCode FROM Vw_GI_SalesSummary LIMIT 20;
+        SELECT CheckId, Date, Month, Year, DayPart, RevenueCenter, CompanyCode, SiteCode FROM Vw_GI_SalesDetails LIMIT 20;
 
-SQL GENERATION RULES:
-- ALWAYS limit results to the latest 20 records using LIMIT 20 at the end of every query
-- Always use appropriate database based on the query requirements
-- Use proper date formatting (DD-MM-YYYY) when filtering by dates
-- Always use appropriate data types (TEXT for dates, INTEGER for amounts)
-- Use LIKE for partial string matches in text fields
-- For date ranges, use proper date comparison functions
-- Always include relevant columns in SELECT clause
-- Use appropriate aggregation functions (SUM, COUNT, AVG) for summary queries
-- For aggregation queries, apply LIMIT 20 after GROUP BY and ORDER BY clauses
-- For multi-database scenarios, generate separate queries with matching column structures
+        SQL GENERATION RULES:
+        - ALWAYS limit results to the latest 20 records using LIMIT 20 at the end of every query
+        - Always use appropriate database based on the query requirements
+        - Use proper date formatting (DD-MM-YYYY) when filtering by dates
+        - Always use appropriate data types (TEXT for dates, INTEGER for amounts)
+        - Use LIKE for partial string matches in text fields
+        - For date ranges, use proper date comparison functions
+        - Always include relevant columns in SELECT clause
+        - Use appropriate aggregation functions (SUM, COUNT, AVG) for summary queries
+        - For aggregation queries, apply LIMIT 20 after GROUP BY and ORDER BY clauses
+        - For multi-database scenarios, generate separate queries with matching column structures
 
-INTELLIGENT DATABASE SELECTION:
-- Analyze the question to identify required tables and their databases
-- If tables are in different databases, generate separate queries
-- Each query should be self-contained and focused on one database
-- Use common identifier columns to enable data correlation
+        INTELLIGENT DATABASE SELECTION:
+        - Analyze the question to identify required tables and their databases
+        - If tables are in different databases, generate separate queries
+        - Each query should be self-contained and focused on one database
+        - Use common identifier columns to enable data correlation
 
-SQLITE-SPECIFIC RULES:
-- Use LIMIT instead of TOP for row restriction
-- Use INNER JOIN, LEFT JOIN, or CROSS JOIN (avoid FULL OUTER JOIN - not supported in SQLite)
-- Ensure all JOIN conditions are properly specified with ON clause
-- Use clear table aliases to avoid column name conflicts
-- Use proper SQLite date functions (strftime, date) for date operations
-- Avoid complex subqueries that might cause performance issues
-- Use proper column aliasing to distinguish between joined tables
-- Ensure all referenced columns exist in the joined tables
-- IMPORTANT: All tables in a JOIN must be from the same database - SQLite does not support cross-database joins
-- If you need data from multiple databases, use separate queries instead of JOINs
+        SQLITE-SPECIFIC RULES:
+        - Use LIMIT instead of TOP for row restriction
+        - Use INNER JOIN, LEFT JOIN, or CROSS JOIN (avoid FULL OUTER JOIN - not supported in SQLite)
+        - Ensure all JOIN conditions are properly specified with ON clause
+        - Use clear table aliases to avoid column name conflicts
+        - Use proper SQLite date functions (strftime, date) for date operations
+        - Avoid complex subqueries that might cause performance issues
+        - Use proper column aliasing to distinguish between joined tables
+        - Ensure all referenced columns exist in the joined tables
+        - IMPORTANT: All tables in a JOIN must be from the same database - SQLite does not support cross-database joins
+        - If you need data from multiple databases, use separate queries instead of JOINs
 
-COMMON QUERY PATTERNS:
-- Basic data retrieval: SELECT * FROM TableName LIMIT 20
-- Filtered queries: SELECT * FROM TableName WHERE ColumnName = 'Value' LIMIT 20
-- Aggregation queries: SELECT ColumnName, COUNT(*) FROM TableName GROUP BY ColumnName LIMIT 20
-- Date range queries: SELECT * FROM TableName WHERE Date BETWEEN '01-01-2024' AND '31-12-2024' LIMIT 20
-- JOIN queries: SELECT t1.Col1, t2.Col2 FROM Table1 t1 LEFT JOIN Table2 t2 ON t1.Id = t2.Id LIMIT 20
-- Multi-database queries: Generate separate queries for each database with matching column structures
+        COMMON QUERY PATTERNS:
+        - Basic data retrieval: SELECT * FROM TableName LIMIT 20
+        - Filtered queries: SELECT * FROM TableName WHERE ColumnName = 'Value' LIMIT 20
+        - Aggregation queries: SELECT ColumnName, COUNT(*) FROM TableName GROUP BY ColumnName LIMIT 20
+        - Date range queries: SELECT * FROM TableName WHERE Date BETWEEN '01-01-2024' AND '31-12-2024' LIMIT 20
+        - JOIN queries: SELECT t1.Col1, t2.Col2 FROM Table1 t1 LEFT JOIN Table2 t2 ON t1.Id = t2.Id LIMIT 20
+        - Multi-database queries: Generate separate queries for each database with matching column structures
 
-IMPORTANT: Every query MUST end with LIMIT 20 to ensure only the latest/most relevant 20 records are returned.
+        IMPORTANT: Every query MUST end with LIMIT 20 to ensure only the latest/most relevant 20 records are returned.
 
-CRITICAL OUTPUT RULES:
-- Return ONLY SQL queries separated by semicolons
-- NO explanations, comments, markdown, or descriptive text
-- NO "Query 1:", "Query 2:", or similar labels
-- NO "###" headers or formatting
-- ONLY pure SQL statements
-- Each query must end with a semicolon
-- Multiple queries should be separated by semicolons on the same line or different lines
+        CRITICAL OUTPUT RULES:
+        - Return ONLY SQL queries separated by semicolons
+        - NO explanations, comments, markdown, or descriptive text
+        - NO "Query 1:", "Query 2:", or similar labels
+        - NO "###" headers or formatting
+        - ONLY pure SQL statements
+        - Each query must end with a semicolon
+        - Multiple queries should be separated by semicolons on the same line or different lines
 
-EXAMPLE CORRECT OUTPUT:
-SELECT CheckId, Date, Month, Year FROM Vw_GI_SalesSummary LIMIT 20;
-SELECT CheckId, Date, Month, Year FROM Vw_GI_SalesDetails LIMIT 20;
+        EXAMPLE CORRECT OUTPUT:
+        SELECT CheckId, Date, Month, Year FROM Vw_GI_SalesSummary LIMIT 20;
+        SELECT CheckId, Date, Month, Year FROM Vw_GI_SalesDetails LIMIT 20;
 
-EXAMPLE INCORRECT OUTPUT:
-To compare data from both tables, I will generate two queries:
-### Query 1: Fetch data from Vw_GI_SalesSummary
-SELECT CheckId, Date, Month, Year FROM Vw_GI_SalesSummary LIMIT 20;
-### Query 2: Fetch data from Vw_GI_SalesDetails  
-SELECT CheckId, Date, Month, Year FROM Vw_GI_SalesDetails LIMIT 20;
+        EXAMPLE INCORRECT OUTPUT:
+        To compare data from both tables, I will generate two queries:
+        ### Query 1: Fetch data from Vw_GI_SalesSummary
+        SELECT CheckId, Date, Month, Year FROM Vw_GI_SalesSummary LIMIT 20;
+        ### Query 2: Fetch data from Vw_GI_SalesDetails  
+        SELECT CheckId, Date, Month, Year FROM Vw_GI_SalesDetails LIMIT 20;
 
-INPUT JSON:
-{{input_text}}
+        INPUT JSON:
+        {{input_text}}
 
-SCHEMA DETAILS:
-{{schema_details}}
+        SCHEMA DETAILS:
+        {{schema_details}}
 
-FINAL INSTRUCTION: Return ONLY SQL queries separated by semicolons. NO explanations, NO markdown, NO comments, NO descriptive text. ONLY SQL statements.
-"""
-    
-    return template
+        FINAL INSTRUCTION: Return ONLY SQL queries separated by semicolons. NO explanations, NO markdown, NO comments, NO descriptive text. ONLY SQL statements.
+        """
 
 # Use dynamic prompt template
 JSON_PROMPT_TEMPLATE = generate_dynamic_prompt_template()
 
-async def run_agent_and_get_queries_and_results(question: str = None):
-    # If no question provided, use the static JSON data as before
-    if question is None:
-        v2_json_str = fetch_latest_v2_from_cosmos()
-        if not v2_json_str:
-            return []
-        try:
-            json_data = json.loads(v2_json_str)
-        except json.JSONDecodeError:
-            return []
-        input_payload = json.dumps(json_data, indent=2)
-    else:
-        # Use the provided question
-        input_payload = question
+async def run_agent_and_get_queries_and_results(question: str):
+    # Require a question to be provided
+    if not question or not question.strip():
+        return []
+    
+    # Use the provided question directly
+    input_payload = question.strip()
 
     agent = ChatCompletionAgent(
         kernel=kernel,
@@ -530,55 +521,54 @@ async def run_agent_and_get_queries_and_results(question: str = None):
 
 # Description generation prompt template
 DESCRIPTION_PROMPT_TEMPLATE = """
-You are a data analyst assistant for Paperchase, a hospitality and restaurant management company.
+    You are a data analyst assistant for Paperchase, a hospitality and restaurant management company.
 
-Your task is to analyze the provided data and generate a clear markdown formatted, concise description of what the data shows.
+    Your task is to analyze the provided data and generate a clear markdown formatted, concise description of what the data shows.
 
-IMPORTANT RULES:
-- If the data is empty, null, or contains no meaningful information, respond ONLY with: "I don't have data for this query. Please try another question."
-- If the SQL query resulted in an error or no results, respond ONLY with: "I don't have data for this query. Please try another question."
-- If the data shows "No results found" or similar error messages, respond ONLY with: "I don't have data for this query. Please try another question."
-- DO NOT generate any analysis, insights, or descriptions if there's no valid data to analyze
-- Only proceed with analysis if you have actual, meaningful data to work with
+    IMPORTANT RULES:
+    - If the data is empty, null, or contains no meaningful information, respond ONLY with: "I don't have data for this query. Please try another question."
+    - If the SQL query resulted in an error or no results, respond ONLY with: "I don't have data for this query. Please try another question."
+    - If the data shows "No results found" or similar error messages, respond ONLY with: "I don't have data for this query. Please try another question."
+    - DO NOT generate any analysis, insights, or descriptions if there's no valid data to analyze
+    - Only proceed with analysis if you have actual, meaningful data to work with
 
-MULTI-DATABASE ANALYSIS HANDLING:
-- If multiple queries were executed (from different databases), analyze each dataset separately first
-- Look for common fields between datasets (like CheckId, Date, CompanyCode, SiteCode) to enable comparison
-- Compare data patterns, trends, and insights across different databases
-- Provide insights on how data from different sources relates to each other
-- If comparing similar tables from different databases, highlight differences and similarities
+    MULTI-DATABASE ANALYSIS HANDLING:
+    - If multiple queries were executed (from different databases), analyze each dataset separately first
+    - Look for common fields between datasets (like CheckId, Date, CompanyCode, SiteCode) to enable comparison
+    - Compare data patterns, trends, and insights across different databases
+    - Provide insights on how data from different sources relates to each other
+    - If comparing similar tables from different databases, highlight differences and similarities
 
-INTELLIGENT DATABASE SELECTION:
-- The system has analyzed your question and selected the most appropriate database(s)
-- If multiple databases were queried, each query focused on tables from a specific database
-- Use common identifier columns to correlate data across different databases
-- Provide insights that combine information from multiple data sources when possible
+    INTELLIGENT DATABASE SELECTION:
+    - The system has analyzed your question and selected the most appropriate database(s)
+    - If multiple databases were queried, each query focused on tables from a specific database
+    - Use common identifier columns to correlate data across different databases
+    - Provide insights that combine information from multiple data sources when possible
 
-DATA ANALYSIS GUIDELINES (ONLY if you have valid data):
-- Focus on key insights and patterns in the data
-- Highlight important metrics, trends, or anomalies
-- Use business-friendly language
-- Keep the description concise, word-to-word, and easy to understand for business users
-- Mention the number of records analyzed
-- If there are specific columns with interesting values, mention them
-- Provide actionable insights when possible
-- Also, suggest a simple forecast or trend based on the data (e.g., "Sales likely to increase", "Customer visits may drop", etc.)
-- Do not go into too much detail; keep it short and to the point
-- For multi-database scenarios, provide comparative insights and highlight data relationships
+    DATA ANALYSIS GUIDELINES (ONLY if you have valid data):
+    - Focus on key insights and patterns in the data
+    - Highlight important metrics, trends, or anomalies
+    - Use business-friendly language
+    - Keep the description concise, word-to-word, and easy to understand for business users
+    - Mention the number of records analyzed
+    - If there are specific columns with interesting values, mention them
+    - Provide actionable insights when possible
+    - Do not go into too much detail; keep it short and to the point
+    - For multi-database scenarios, provide comparative insights and highlight data relationships
 
-DATA TO ANALYZE:
-{data_to_analyze}
+    DATA TO ANALYZE:
+    {data_to_analyze}
 
-SQL QUERY EXECUTED:
-{sql_query}
+    SQL QUERY EXECUTED:
+    {sql_query}
 
-USER QUESTION:
-{user_question}
+    USER QUESTION:
+    {user_question}
 
-FIRST CHECK: Is the data empty, null, or contains error messages? If yes, respond with "I don't have data for this query. Please try another question."
+    FIRST CHECK: Is the data empty, null, or contains error messages? If yes, respond with "I don't have data for this query. Please try another question."
 
-If you have valid data, generate a clear, business-focused description of what this data reveals. Focus on insights that would be valuable for restaurant management decisions, and include a brief forecast suggestion. If multiple datasets are present, provide comparative analysis and highlight relationships between different data sources.
-"""
+    If you have valid data, generate a clear, business-focused description of what this data reveals. Focus on insights that would be valuable for restaurant management decisions. If multiple datasets are present, provide comparative analysis and highlight relationships between different data sources.
+    """
 
 async def generate_data_description(data: list, sql_query: str, user_question: str) -> str:
     """Generate a description of the data using o3-mini model"""

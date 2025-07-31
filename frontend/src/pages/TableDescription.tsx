@@ -211,30 +211,17 @@ function TableDescription() {
 
     const fetchDatabases = async () => {
         try {
-            const response = await fetch('/api/list_all_database');
-            const data = await response.json();
-            
-            if (data.status_code === 404 && data.detail?.includes('No Connection Established')) {
-                handleConnectionError(data.detail);
-                return;
-            }
-            
-            if (!response.ok) throw new Error('Failed to fetch databases');
-            setDatabases(data.databases);
+            // For SQL Server, we'll use a fixed database name
+            setDatabases(['DataWarehouseV2_UK']);
         } catch (error) {
-            showAlert('error', 'Failed to fetch databases');
+            showAlert('error', 'Failed to set database');
         }
     };
 
     const fetchTables = async () => {
         try {
-            const response = await fetch(`/api/list_all_tables?db_name=${selectedDatabase}`);
+            const response = await fetch('/api/list_all_tables');
             const data = await response.json();
-            
-            if (data.status_code === 404 && data.detail?.includes('No Connection Established')) {
-                handleConnectionError(data.detail);
-                return;
-            }
             
             if (!response.ok) throw new Error('Failed to fetch tables');
             setTables(data.tables);
@@ -244,11 +231,11 @@ function TableDescription() {
     };
 
     const fetchDescription = async () => {
-        if (!selectedDatabase || !selectedTable) return;
+        if (!selectedTable) return;
         
         setLoading(true);
         try {
-            const response = await fetch(`/api/get-description?database_name=${selectedDatabase}&table_name=${selectedTable}`);
+            const response = await fetch(`/api/get-description?table_name=${selectedTable}`);
             const data = await response.json();
             
             if (response.ok) {
@@ -281,17 +268,12 @@ function TableDescription() {
     };
 
     const generateDescription = async () => {
-        if (!selectedDatabase || !selectedTable) return;
+        if (!selectedTable) return;
         
         setLoading(true);
         try {
-            const response = await fetch(`/api/describe-table-columns?db_name=${selectedDatabase}&table_name=${selectedTable}`);
+            const response = await fetch(`/api/describe-table-columns?table_name=${selectedTable}`);
             const data = await response.json();
-            
-            if (data.status_code === 404 && data.detail?.includes('No Connection Established')) {
-                handleConnectionError(data.detail);
-                return;
-            }
             
             if (!response.ok) throw new Error('Failed to generate description');
             
@@ -306,24 +288,19 @@ function TableDescription() {
     };
 
     const updateDescription = async () => {
-        if (!selectedDatabase || !selectedTable) return;
+        if (!selectedTable) return;
         
         setLoading(true);
         try {
-            const response = await fetch(`/api/update-description?database_name=${selectedDatabase}&table_name=${selectedTable}`, {
-                method: 'PUT',
+            const response = await fetch(`/api/update-description?table_name=${selectedTable}`, {
+                method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify(editableDescriptions),
+                body: JSON.stringify({ description: editableDescriptions }),
             });
 
             const data = await response.json();
-            
-            if (data.status_code === 404 && data.detail?.includes('No Connection Established')) {
-                handleConnectionError(data.detail);
-                return;
-            }
 
             if (!response.ok) throw new Error('Failed to update description');
             

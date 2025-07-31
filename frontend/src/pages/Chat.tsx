@@ -5,7 +5,7 @@ import { Link } from "react-router-dom";
 import PurchaseOrderChart from "../components/PurchaseOrderChart";
 import PurchaseOrderTable from "../components/PurchaseOrderTable";
 import data from '../PurchaseOrderTable.json';
-import { MessageCircle, BarChart3, Database, Loader2 } from 'lucide-react';
+import { MessageCircle, BarChart3, Database, Loader2, ChevronDown } from 'lucide-react';
 import type { ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import DatabaseTablesBox from "../components/DatabaseTablesBox";
@@ -14,6 +14,7 @@ import ReactMarkdown from 'react-markdown';
 export function cn(...inputs: ClassValue[]) {
     return twMerge(inputs as any);
 }
+
 // Card Components (same as UploadFile.tsx)
 const Card = ({ className, children, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
     <div 
@@ -58,15 +59,113 @@ interface SqlResponse {
     original_answer?: string;
 }
 
+interface Company {
+    companyCode: string;
+    country: string;
+}
+
 const Chat = () => {
-    const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState("");
+    const [messages, setMessages] = useState<Message[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [chartData, setChartData] = useState<any[]>([]);
     const [tableData, setTableData] = useState<any[]>([]);
     const [selectedDatabase, setSelectedDatabase] = useState<string>("paperchase-sales-details");
+    const [companies, setCompanies] = useState<Company[]>([]);
+    const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
+    const [showCompanyDropdown, setShowCompanyDropdown] = useState(false);
+    const [searchTerm, setSearchTerm] = useState("");
+
+    // Filter and sort companies based on search term with relevance scoring
+    const filteredCompanies = companies
+        .filter(company => 
+            company.country.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            company.companyCode.toLowerCase().includes(searchTerm.toLowerCase())
+        )
+        .sort((a, b) => {
+            if (!searchTerm) return 0;
+            
+            const searchLower = searchTerm.toLowerCase();
+            const aCountry = a.country.toLowerCase();
+            const bCountry = b.country.toLowerCase();
+            const aCode = a.companyCode.toLowerCase();
+            const bCode = b.companyCode.toLowerCase();
+            
+            // Calculate relevance scores
+            const getRelevanceScore = (company: Company) => {
+                let score = 0;
+                const companyCountry = company.country.toLowerCase();
+                const companyCode = company.companyCode.toLowerCase();
+                
+                // Exact matches get highest score
+                if (companyCountry === searchLower || companyCode === searchLower) score += 1000;
+                
+                // Starts with matches
+                if (companyCountry.startsWith(searchLower) || companyCode.startsWith(searchLower)) score += 500;
+                
+                // Code matches (higher priority than country)
+                if (companyCode.includes(searchLower)) score += 100;
+                
+                // Country matches
+                if (companyCountry.includes(searchLower)) score += 50;
+                
+                return score;
+            };
+            
+            const aScore = getRelevanceScore(a);
+            const bScore = getRelevanceScore(b);
+            
+            // Debug logging
+            if (searchTerm) {
+                console.log(`Sorting: "${a.country} (${a.companyCode})" score: ${aScore}, "${b.country} (${b.companyCode})" score: ${bScore}`);
+            }
+            
+            // Sort by score (highest first), then alphabetically
+            if (aScore !== bScore) {
+                return bScore - aScore;
+            }
+            
+            return aCountry.localeCompare(bCountry);
+        });
 
     const messageRef = useRef<HTMLDivElement>(null);
+
+    // Fetch companies on component mount
+    useEffect(() => {
+        fetchCompanies();
+    }, []);
+
+    // Close dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            const target = event.target as Element;
+            if (!target.closest('.company-dropdown')) {
+                setShowCompanyDropdown(false);
+                setSearchTerm(""); // Clear search when closing dropdown
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, []);
+
+    const fetchCompanies = async () => {
+        try {
+            const response = await fetch('/api/get-companies');
+            if (response.ok) {
+                const data = await response.json();
+                setCompanies(data.companies || []);
+                // Set first company as default if available
+                if (data.companies && data.companies.length > 0) {
+                    setSelectedCompany(data.companies[0]);
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching companies:', error);
+        }
+    };
 
     const handleSend = async () => {
         if (!input.trim()) return;
@@ -77,13 +176,15 @@ const Chat = () => {
         setIsLoading(true);
 
         try {
-            const response = await fetch('/api/agent', {
+            const response = await fetch('/api/multi-agent', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    question: input
+                    question: input,
+                    company_code: selectedCompany?.companyCode || null,
+                    company_name: selectedCompany?.country || null
                 }),
             });
 
@@ -148,22 +249,79 @@ const Chat = () => {
             style={{ backgroundImage: `url(${background})` }}
         >
             {/* Header */}
-            <div className="bg-white/90 backdrop-blur-sm shadow-lg border-b border-gray-200">
+            <div className="bg-white/90 backdrop-blur-sm shadow-lg border-b border-gray-200 relative z-50">
                 <div className="container mx-auto px-6 py-4">
                     <div className="flex justify-between items-center">
                         <div className="flex items-center gap-3">
                             <MessageCircle className="h-8 w-8 text-[#BF2A2D]" />
                             <h1 className="text-2xl font-bold text-[#163E5D]">Paperchase Chat Assistant</h1>
                         </div>
-                        <Link to='/'>
-                            <img 
-                                src={Logo} 
-                                alt="Logo" 
-                                width={150} 
-                                height={106} 
-                                className="hover:scale-105 transition-transform duration-200" 
-                            />
-                        </Link>
+                        <div className="flex items-center gap-4">
+                            {/* Company Selection Dropdown */}
+                            <div className="relative company-dropdown z-[9999]">
+                                <button
+                                    onClick={() => setShowCompanyDropdown(!showCompanyDropdown)}
+                                    className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#BF2A2D] focus:border-transparent"
+                                >
+                                    <span className="text-sm font-medium text-gray-700">
+                                        {selectedCompany ? `${selectedCompany.country} (${selectedCompany.companyCode})` : 'Select Company'}
+                                    </span>
+                                    <ChevronDown className="h-4 w-4 text-gray-500" />
+                                </button>
+                                
+                                {showCompanyDropdown && (
+                                    <div className="absolute right-0 mt-2 w-64 bg-white border border-gray-300 rounded-lg shadow-xl z-[9999] max-h-60 overflow-y-auto">
+                                        {/* Search Input */}
+                                        <div className="sticky top-0 bg-white p-2 border-b border-gray-200">
+                                            <input
+                                                type="text"
+                                                placeholder="Search country or code..."
+                                                value={searchTerm}
+                                                onChange={(e) => setSearchTerm(e.target.value)}
+                                                className="w-full px-3 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#BF2A2D] focus:border-transparent"
+                                                onClick={(e) => e.stopPropagation()}
+                                            />
+                                        </div>
+                                        
+                                        {/* Company List */}
+                                        {filteredCompanies.length > 0 ? (
+                                            filteredCompanies.map((company) => (
+                                                <button
+                                                    key={company.companyCode}
+                                                    onClick={() => {
+                                                        setSelectedCompany(company);
+                                                        setShowCompanyDropdown(false);
+                                                        setSearchTerm(""); // Clear search when selecting
+                                                    }}
+                                                    className={`w-full text-left px-4 py-2 hover:bg-gray-100 ${
+                                                        selectedCompany?.companyCode === company.companyCode 
+                                                            ? 'bg-[#BF2A2D] text-white' 
+                                                            : 'text-gray-700'
+                                                    }`}
+                                                >
+                                                    <div className="font-medium">{company.country}</div>
+                                                    <div className="text-xs">Code: {company.companyCode}</div>
+                                                </button>
+                                            ))
+                                        ) : (
+                                            <div className="px-4 py-2 text-sm text-gray-500 text-center">
+                                                No companies found
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                            
+                            <Link to='/'>
+                                <img 
+                                    src={Logo} 
+                                    alt="Logo" 
+                                    width={150} 
+                                    height={106} 
+                                    className="hover:scale-105 transition-transform duration-200" 
+                                />
+                            </Link>
+                        </div>
                     </div>
                 </div>
             </div>

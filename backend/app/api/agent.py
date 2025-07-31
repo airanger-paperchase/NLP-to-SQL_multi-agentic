@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from core.query_generator import run_agent_and_get_queries_and_results, generate_data_description
+from core.sqlserver_query_generator import run_agent_and_get_queries_and_results, generate_data_description
 from fastapi.responses import JSONResponse
 import asyncio
 

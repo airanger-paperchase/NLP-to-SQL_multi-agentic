@@ -239,22 +239,11 @@ function UploadFile({ isSidebarOpen }: { isSidebarOpen: boolean }) {
 
     const fetchDatabases = async () => {
         try {
-            const response = await fetch('/api/list_all_database');
-            const data = await response.json();
-            
-            if (data.status_code === 404 && data.detail?.includes('No Connection Established')) {
-                handleConnectionError(data.detail);
-                return;
-            }
-            
-            if (!response.ok) {
-                throw new Error('Failed to fetch databases');
-            }
-            
-            setDatabases(data.databases);
+            // For SQL Server, we'll use a fixed database name
+            setDatabases(['DataWarehouseV2_UK']);
         } catch (error) {
-            console.error('Error fetching databases:', error);
-            showAlert('error', 'Failed to fetch databases');
+            console.error('Error setting database:', error);
+            showAlert('error', 'Failed to set database');
         }
     };
 

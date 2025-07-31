@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import * as React from "react";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-import { Database, Server, User, Lock, CheckCircle, AlertCircle, Loader2, Wifi, WifiOff } from "lucide-react";
+import { Database, Server, User, Lock, CheckCircle, AlertCircle, Loader2, Wifi, WifiOff, MessageCircle } from "lucide-react";
 import background from '../assets/windmills-snowy-landscape.jpg';
 import Logo from '../assets/logo-paperchase.png';
 import { Link } from "react-router";
@@ -71,6 +71,7 @@ const Button = React.forwardRef<
   );
 });
 
+
 const Input = React.forwardRef<
   HTMLInputElement,
   React.InputHTMLAttributes<HTMLInputElement>
@@ -110,11 +111,13 @@ const Badge = ({ className, variant = 'default', children, ...props }: React.HTM
   };
 
   return (
-    <div className={cn("inline-flex items-center rounded-full px-3 py-1 text-xs font-medium", variants[variant], className)} {...props}>
+    <div className={cn("inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium", variants[variant], className)} {...props}>
       {children}
     </div>
   );
 };
+
+
 
 type FormData = {
   server: string;
@@ -124,33 +127,104 @@ type FormData = {
 
 type ConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
 
+type ConnectionInfo = {
+  server: string;
+  database: string;
+  username: string;
+  method: 'backend' | 'custom';
+};
+
 export default function DatabaseForm() {
   const [formData, setFormData] = useState<FormData>({
     server: "",
     username: "",
-    password: "",
+    password: ""
   });
 
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('disconnected');
   const [responseMsg, setResponseMsg] = useState("");
-  const [databases, setDatabases] = useState<string[]>([]);
   const [tables, setTables] = useState<string[]>([]);
-  const [selectedDatabase, setSelectedDatabase] = useState<string>('');
   const [selectedTables, setSelectedTables] = useState<string[]>([]);
-  const [loadingDatabases, setLoadingDatabases] = useState(false);
   const [loadingTables, setLoadingTables] = useState(false);
+  const [currentConnection, setCurrentConnection] = useState<ConnectionInfo | null>(null);
+  const [validationErrors, setValidationErrors] = useState<{[key: string]: string}>({});
+
+
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+    // Clear validation error when user starts typing (only if fields are enabled)
+    if (validationErrors[name] && connectionStatus !== 'connected') {
+      setValidationErrors(prev => ({ ...prev, [name]: '' }));
+    }
   };
 
-  const handleNewConnection = async () => {
+  const validateForm = (): boolean => {
+    // Only validate if fields are enabled (not connected)
+    if (connectionStatus === 'connected') {
+      return true;
+    }
+
+    const errors: {[key: string]: string} = {};
+    
+    if (!formData.server.trim()) {
+      errors.server = 'Server is required';
+    }
+    
+    if (!formData.username.trim()) {
+      errors.username = 'Username is required';
+    }
+    
+    if (!formData.password.trim()) {
+      errors.password = 'Password is required';
+    }
+    
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleTestConnection = async () => {
     setConnectionStatus('connecting');
     setResponseMsg("");
-    setDatabases([]);
     setTables([]);
-    setSelectedDatabase('');
+    setSelectedTables([]);
+
+    try {
+        const response = await fetch("/api/test-connection");
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.detail || "Failed to connect to database.");
+        }
+
+        setConnectionStatus('connected');
+        setResponseMsg(data.message || "Connection established successfully!");
+        setTables(data.available_tables || []);
+        setCurrentConnection({
+          server: data.server || "10.0.40.20",
+          database: data.database || "DataWarehouseV2_UK",
+          username: data.username || "DEV_TANISH",
+          method: 'backend'
+        });
+    } catch (error) {
+        console.error(error);
+        setConnectionStatus('error');
+        setResponseMsg((error as Error).message || "Failed to connect to database.");
+    }
+};
+
+  const handleNewConnection = async () => {
+    // Validate form before proceeding
+    if (!validateForm()) {
+      setResponseMsg("Please fill in all required fields.");
+      return;
+    }
+
+    setConnectionStatus('connecting');
+    setResponseMsg("");
+    setTables([]);
+    setSelectedTables([]);
 
     try {
         const response = await fetch("/api/new-connection", {
@@ -166,21 +240,19 @@ export default function DatabaseForm() {
 
         const data = await response.json();
 
-        if (response.status === 404 && data.detail?.includes('No Connection Established')) {
-            setConnectionStatus('error');
-            setResponseMsg(data.detail);
-            return;
-        }
-
         if (!response.ok) {
             throw new Error(data.detail || "Failed to connect to database.");
         }
 
         setConnectionStatus('connected');
         setResponseMsg(data.message || "Connection established successfully!");
-        
-        // After successful connection, fetch databases
-        fetchDatabases();
+        setTables(data.available_tables || []);
+        setCurrentConnection({
+          server: formData.server,
+          database: data.database || "Unknown",
+          username: formData.username,
+          method: 'custom'
+        });
     } catch (error) {
         console.error(error);
         setConnectionStatus('error');
@@ -188,79 +260,32 @@ export default function DatabaseForm() {
     }
 };
 
-// Update fetchDatabases to show loader
-const fetchDatabases = async () => {
-    setLoadingDatabases(true);
-    try {
-      const response = await fetch('/api/list_all_database');
-      const data = await response.json();
 
-      if (response.status === 404 && data.detail?.includes('No Connection Established')) {
-        setConnectionStatus('error');
-        setResponseMsg(data.detail);
-        setLoadingDatabases(false);
-        return;
-      }
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch databases');
-      }
-
-      setDatabases(data.databases || []);
-    } catch (error) {
-      console.error('Error fetching databases:', error);
-      setResponseMsg('Failed to fetch databases');
-    } finally {
-      setLoadingDatabases(false);
-    }
-  };
-
-  // Update handleDatabaseSelect to show loader and reset selectedTables
-  const handleDatabaseSelect = async (dbName: string) => {
-    setSelectedDatabase(dbName);
-    setLoadingTables(true);
-    setSelectedTables([]);
-    try {
-      const response = await fetch(`/api/list_all_tables?db_name=${dbName}`);
-      const data = await response.json();
-
-      if (response.status === 404 && data.detail?.includes('No Connection Established')) {
-        setConnectionStatus('error');
-        setResponseMsg(data.detail);
-        setLoadingTables(false);
-        return;
-      }
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch tables');
-      }
-
-      setTables(data.tables || []);
-    } catch (error) {
-      console.error('Error fetching tables:', error);
-      setResponseMsg('Failed to fetch tables');
-    } finally {
-      setLoadingTables(false);
-    }
-  };
 
   const handleReconnect = async () => {
+    if (!currentConnection) return;
+
     setConnectionStatus('connecting');
     setResponseMsg("");
 
     try {
-        const response = await fetch("/api/re-connect", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-        });
+        let response;
+        if (currentConnection.method === 'backend') {
+            response = await fetch("/api/test-connection");
+        } else {
+            response = await fetch("/api/new-connection", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    server: currentConnection.server,
+                    username: currentConnection.username,
+                    password: formData.password, // Use current password
+                    status: "connected"
+                }),
+            });
+        }
 
         const data = await response.json();
-
-        if (response.status === 404 && data.detail?.includes('No Connection Established')) {
-            setConnectionStatus('error');
-            setResponseMsg(data.detail);
-            return;
-        }
 
         if (!response.ok) {
             throw new Error(data.detail || "Failed to reconnect to database.");
@@ -268,9 +293,7 @@ const fetchDatabases = async () => {
 
         setConnectionStatus('connected');
         setResponseMsg(data.message || "Reconnected successfully!");
-        
-        // After successful reconnection, fetch databases
-        fetchDatabases();
+        setTables(data.available_tables || []);
     } catch (error) {
         console.error(error);
         setConnectionStatus('error');
@@ -279,58 +302,38 @@ const fetchDatabases = async () => {
 };
 
   const handleDisconnect = async () => {
-    try {
-        const response = await fetch("/api/disconnect", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-        });
+    setConnectionStatus('disconnected');
+    setResponseMsg("Disconnected from database.");
+    setTables([]);
+    setSelectedTables([]);
+    // Clear validation errors when disconnecting
+    setValidationErrors({});
+    // Keep currentConnection for reconnection - don't clear it
+  };
 
-        const data = await response.json();
-
-        if (!response.ok) {
-            throw new Error(data.detail || "Failed to disconnect from database.");
-        }
-
-        setConnectionStatus('disconnected');
-        setResponseMsg(data.message || "Disconnected from database.");
-        setDatabases([]);
-        setTables([]);
-        setSelectedDatabase('');
-    } catch (error) {
-        console.error(error);
-        setResponseMsg((error as Error).message || "Failed to disconnect from database.");
-    }
-};
-
-  // Add useEffect to check connection status on component mount
+  // Check connection status on component mount
 useEffect(() => {
     const checkConnection = async () => {
         try {
             const response = await fetch("/api/test-connection");
             const data = await response.json();
 
-            if (response.ok && data.status === "connected") {
+        if (response.ok) {
                 setConnectionStatus('connected');
-                setFormData({
-                    server: data.server || "",
-                    username: data.username || "",
-                    password: data.password || ""
-                });
-                fetchDatabases();
+          setResponseMsg("Connected to SQL Server database.");
+          setTables(data.available_tables || []);
+        } else {
+          setConnectionStatus('disconnected');
+          setResponseMsg("Not connected to database.");
             }
         } catch (error) {
-            console.error('Error checking connection:', error);
             setConnectionStatus('disconnected');
+        setResponseMsg("Not connected to database.");
         }
     };
 
     checkConnection();
 }, []);
-
-  const isConnected = connectionStatus === 'connected';
-  const isConnecting = connectionStatus === 'connecting';
-  const isDisconnected = connectionStatus === 'disconnected';
-  const hasError = connectionStatus === 'error';
 
   return (
     <div
@@ -343,7 +346,7 @@ useEffect(() => {
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-3">
               <Database className="h-8 w-8 text-[#BF2A2D]" />
-              <h1 className="text-2xl font-bold text-[#163E5D]">Database Connection</h1>
+              <h1 className="text-2xl font-bold text-[#163E5D]">SQL Server Database Connection</h1>
             </div>
             <Link to='/'>
               <img src={Logo} alt="Logo" width={150} height={106} className="hover:scale-105 transition-transform duration-200" />
@@ -352,262 +355,282 @@ useEffect(() => {
         </div>
       </div>
 
+      {/* Main Content */}
       <div className="container mx-auto px-6 py-8">
-        <div className="max-w-4x1 mx-auto grid gap-8 lg:grid-cols-2">
-          
-          {/* Connection Form */}
-          <Card className="h-fit">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-3">
-                <Server className="h-6 w-6 text-[#BF2A2D]" />
-                Database Configuration
-              </CardTitle>
-              <div className="flex items-center gap-2">
-                {isConnected && <Badge variant="success" className="flex items-center gap-1">
-                  <CheckCircle className="h-3 w-3" />
-                  Connected
-                </Badge>}
-                {hasError && <Badge variant="destructive" className="flex items-center gap-1">
-                  <AlertCircle className="h-3 w-3" />
-                  Connection Failed
-                </Badge>}
-                {isDisconnected && <Badge className="flex items-center gap-1">
-                  <WifiOff className="h-3 w-3" />
-                  Disconnected
-                </Badge>}
-              </div>
-            </CardHeader>
-            
-            <CardContent className="space-y-6">
-              {/* Connection Form */}
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                    <Server className="h-4 w-4" />
-                    Database Server
-                  </label>
-                  <Input
-                    name="server"
-                    placeholder="your-db-server.database.windows.net"
-                    value={formData.server}
-                    onChange={handleChange}
-                    disabled={isConnected}
-                  />
+        <div className="max-w-6xl mx-auto space-y-6">
+          {/* Connection Form and Available Tables - Side by Side */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Connection Form - Takes 2/3 of the width */}
+            <div className="lg:col-span-2">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Database Connection</CardTitle>
+                  <p className="text-gray-600">Connect to SQL Server database</p>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {/* Current Connection Info - Always Show */}
+                    {currentConnection && (
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <div className="flex items-center gap-2 mb-2">
+                          <CheckCircle className="h-4 w-4 text-blue-600" />
+                          <span className="font-medium text-blue-800">Current Connection</span>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                          <div>
+                            <span className="text-gray-600">Server:</span>
+                            <span className="ml-2 font-medium">{currentConnection.server}</span>
+                          </div>
+                          <div>
+                            <span className="text-gray-600">Database:</span>
+                            <span className="ml-2 font-medium">{currentConnection.database}</span>
+                          </div>
+                          <div>
+                            <span className="text-gray-600">Method:</span>
+                            <span className="ml-2 font-medium capitalize">{currentConnection.method}</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Default Connection Info - Show when no current connection */}
+                    {!currentConnection && (
+                      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                        <div className="flex items-center gap-2 mb-2">
+                          <CheckCircle className="h-4 w-4 text-gray-500" />
+                          <span className="font-medium text-gray-700">Default Connection</span>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                          <div>
+                            <span className="text-gray-600">Server:</span>
+                            <span className="ml-2 font-medium">10.0.40.20</span>
+                          </div>
+                          <div>
+                            <span className="text-gray-600">Database:</span>
+                            <span className="ml-2 font-medium">DataWarehouseV2_UK</span>
+                          </div>
+                          <div>
+                            <span className="ml-25 text-gray-600">Method:</span>
+                            <span className="ml-2 font-medium capitalize">backend</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Input Fields - Only Show When Disconnected */}
+                    {connectionStatus === 'disconnected' && (
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                            <Server className="h-4 w-4" />
+                            Server
+                          </label>
+                          <Input
+                            name="server"
+                            value={formData.server}
+                            onChange={handleChange}
+                            placeholder="Server address"
+                            className={validationErrors.server ? "border-red-500" : ""}
+                          />
+                          {validationErrors.server && (
+                            <p className="text-red-500 text-xs">{validationErrors.server}</p>
+                          )}
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                            <User className="h-4 w-4" />
+                            Username
+                          </label>
+                          <Input
+                            name="username"
+                            value={formData.username}
+                            onChange={handleChange}
+                            placeholder="Username"
+                            className={validationErrors.username ? "border-red-500" : ""}
+                          />
+                          {validationErrors.username && (
+                            <p className="text-red-500 text-xs">{validationErrors.username}</p>
+                          )}
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                            <Lock className="h-4 w-4" />
+                            Password
+                          </label>
+                          <Input
+                            name="password"
+                            type="password"
+                            value={formData.password}
+                            onChange={handleChange}
+                            placeholder="Password"
+                            className={validationErrors.password ? "border-red-500" : ""}
+                          />
+                          {validationErrors.password && (
+                            <p className="text-red-500 text-xs">{validationErrors.password}</p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                {/* Connection Status */}
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    {connectionStatus === 'connected' ? (
+                      <CheckCircle className="h-5 w-5 text-green-600" />
+                    ) : connectionStatus === 'connecting' ? (
+                      <Loader2 className="h-5 w-5 text-blue-600 animate-spin" />
+                    ) : connectionStatus === 'error' ? (
+                      <AlertCircle className="h-5 w-5 text-red-600" />
+                    ) : (
+                      <WifiOff className="h-5 w-5 text-gray-400" />
+                    )}
+                    <span className="text-sm font-medium">
+                      {connectionStatus === 'connected' && 'Connected'}
+                      {connectionStatus === 'connecting' && 'Connecting...'}
+                      {connectionStatus === 'error' && 'Connection Error'}
+                      {connectionStatus === 'disconnected' && 'Disconnected'}
+                    </span>
+                  </div>
+                  {connectionStatus === 'connected' && (
+                    <Badge variant="success">SQL Server</Badge>
+                  )}
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                    <User className="h-4 w-4" />
-                    Username
-                  </label>
-                  <Input
-                    name="username"
-                    placeholder="Enter username"
-                    value={formData.username}
-                    onChange={handleChange}
-                    disabled={isConnected}
-                  />
-                </div>
 
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                    <Lock className="h-4 w-4" />
-                    Password
-                  </label>
-                  <Input
-                    name="password"
-                    type="password"
-                    placeholder="Enter password"
-                    value={formData.password}
-                    onChange={handleChange}
-                    disabled={isConnected}
-                  />
-                </div>
-              </div>
 
-              {/* Connection Buttons */}
-              <div className="flex gap-3">
-                <Button
-                  onClick={handleNewConnection}
-                  disabled={isConnecting || (!isDisconnected && !hasError)}
-                  className="flex-1"
-                >
-                  {isConnecting ? (
+                {/* Action Buttons */}
+                <div className="flex gap-4">
+                  {connectionStatus === 'disconnected' && (
                     <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Connecting...
-                    </>
-                  ) : (
-                    <>
-                      <Wifi className="h-4 w-4" />
-                      New Connection
+                      <Button onClick={handleNewConnection}>
+                        <Wifi className="h-4 w-4" />
+                        Connect
+                      </Button>
+                      <Button variant="outline" onClick={handleTestConnection}>
+                        <Wifi className="h-4 w-4" />
+                        Test Connection
+                      </Button>
+                      {currentConnection && (
+                        <Button variant="secondary" onClick={handleReconnect}>
+                          <Wifi className="h-4 w-4" />
+                          Reconnect Previous
+                        </Button>
+                      )}
                     </>
                   )}
-                </Button>
-
-                <Button
-                  variant="secondary"
-                  onClick={handleReconnect}
-                  disabled={isConnecting || isDisconnected}
-                >
-                  <Wifi className="h-4 w-4" />
-                  Reconnect
-                </Button>
-
-                <Button
-                  variant="destructive"
-                  onClick={handleDisconnect}
-                  disabled={!isConnected}
-                >
-                  <WifiOff className="h-4 w-4" />
-                  Disconnect
-                </Button>
-              </div>
+                  {connectionStatus === 'connecting' && (
+                    <Button disabled>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Connecting...
+                    </Button>
+                  )}
+                  {connectionStatus === 'connected' && (
+                    <>
+                      <Button variant="secondary" onClick={handleReconnect}>
+                        <Wifi className="h-4 w-4" />
+                        Reconnect
+                      </Button>
+                      <Button variant="outline" onClick={handleDisconnect}>
+                        Disconnect
+                      </Button>
+                    </>
+                  )}
+                  {connectionStatus === 'error' && (
+                    <>
+                      <Button onClick={handleNewConnection}>
+                        <Wifi className="h-4 w-4" />
+                        Retry Connection
+                      </Button>
+                      <Button variant="outline" onClick={handleTestConnection}>
+                        <Wifi className="h-4 w-4" />
+                        Test Connection
+                      </Button>
+                      {currentConnection && (
+                        <Button variant="secondary" onClick={handleReconnect}>
+                          <Wifi className="h-4 w-4" />
+                          Reconnect Previous
+                        </Button>
+                      )}
+                    </>
+                  )}
+                </div>
 
               {/* Response Message */}
               {responseMsg && (
-                <Alert variant={isConnected ? 'success' : hasError ? 'destructive' : 'default'}>
-                  <div className="flex items-center gap-2">
-                    {isConnected ? <CheckCircle className="h-4 w-4" /> : 
-                     hasError ? <AlertCircle className="h-4 w-4" /> : 
-                     <Database className="h-4 w-4" />}
+                  <Alert variant={connectionStatus === 'error' ? 'destructive' : 'success'}>
                     {responseMsg}
-                  </div>
                 </Alert>
               )}
+              </div>
             </CardContent>
           </Card>
+            </div>
 
-          {/* Database Information */}
-          <Card className="h-fit">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-3">
-                <Database className="h-6 w-6 text-[#BF2A2D]" />
-                Database Information
-              </CardTitle>
-            </CardHeader>
-            
-            <CardContent className="space-y-6">
-              {!isConnected ? (
-                <div className="text-center py-12 text-gray-500">
-                  <Database className="h-16 w-16 mx-auto mb-4 text-gray-300" />
-                  <p className="text-lg font-medium">No Connection</p>
-                  <p className="text-sm">Connect to a database to view information</p>
-                </div>
-              ) : (
-                <div className="space-y-6">
-                  {/* Available Databases */}
-                  <div className="space-y-3">
-                    <h3 className="text-lg font-semibold text-[#163E5D] flex items-center gap-2">
-                      <Database className="h-5 w-5" />
-                      Available Databases ({databases.length})
-                    </h3>
-                    <div className="relative">
-                      {loadingDatabases && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-white/80 z-10 rounded-lg">
-                          <Loader2 className="h-6 w-6 animate-spin text-[#BF2A2D]" />
-                        </div>
-                      )}
-                      <div className="grid gap-2 max-h-48 overflow-y-auto">
-                        {databases.map((db, index) => (
+            {/* Available Tables - Takes 1/3 of the width */}
+            <div className="lg:col-span-1">
+              {connectionStatus === 'connected' && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Available Tables</CardTitle>
+                    <p className="text-gray-600">Tables in DataWarehouseV2_UK database</p>
+                  </CardHeader>
+                  <CardContent>
+                    {loadingTables ? (
+                      <div className="flex items-center justify-center py-8">
+                        <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+                        <span className="ml-2 text-gray-600">Loading tables...</span>
+                      </div>
+                    ) : tables.length > 0 ? (
+                      <div className="space-y-2">
+                        {tables.map((table) => (
                           <div
-                            key={index}
-                            onClick={() => handleDatabaseSelect(db)}
-                            className={cn(
-                              "p-3 rounded-lg border cursor-pointer transition-all duration-200 hover:shadow-md",
-                              selectedDatabase === db 
-                                ? "bg-[#BF2A2D]/10 border-[#BF2A2D] text-[#BF2A2D]" 
-                                : "bg-white border-gray-200 hover:border-[#BF2A2D]/50"
-                            )}
+                            key={table}
+                            className="p-3 border rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer"
+                            onClick={() => setSelectedTables(prev => 
+                              prev.includes(table) 
+                                ? prev.filter(t => t !== table)
+                                : [...prev, table]
+                              )}
                           >
                             <div className="flex items-center justify-between">
-                              <span className="font-medium">{db}</span>
-                              {selectedDatabase === db && <CheckCircle className="h-4 w-4" />}
+                              <span className="font-medium text-gray-900">{table}</span>
+                              {selectedTables.includes(table) && (
+                                <CheckCircle className="h-5 w-5 text-green-600" />
+                              )}
                             </div>
                           </div>
                         ))}
                       </div>
-                    </div>
-                  </div>
-
-                  {/* Tables in Selected Database with checkboxes and loader */}
-                  {selectedDatabase && (
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between mb-2">
-                        <h3 className="text-lg font-semibold text-[#163E5D] flex items-center gap-2">
-                          <Server className="h-5 w-5" />
-                          Tables in "{selectedDatabase}" ({tables.length})
-                        </h3>
-                        {tables.length > 0 && (
-                          <button
-                            className="text-sm px-3 py-1 rounded bg-[#BF2A2D] text-white hover:bg-[#a82325] transition"
-                            type="button"
-                            onClick={() => {
-                              if (selectedTables.length === tables.length) {
-                                setSelectedTables([]);
-                              } else {
-                                setSelectedTables([...tables]);
-                              }
-                            }}
-                          >
-                            {selectedTables.length === tables.length ? "Unselect All" : "Select All"}
-                          </button>
-                        )}
-                      </div>
-                      <div className="relative">
-                        {loadingTables && (
-                          <div className="absolute inset-0 flex items-center justify-center bg-white/80 z-10 rounded-lg">
-                            <Loader2 className="h-6 w-6 animate-spin text-[#BF2A2D]" />
-                          </div>
-                        )}
-                        {tables.length > 0 ? (
-                          <div className="grid gap-2 max-h-48 overflow-y-auto">
-                            {tables.map((table, idx) => (
-                              <div
-                                key={idx}
-                                className={cn(
-                                  "p-3 rounded-lg border flex items-center cursor-pointer transition-all duration-200 hover:shadow-md",
-                                  selectedTables.includes(table)
-                                    ? "bg-[#BF2A2D]/10 border-[#BF2A2D] text-[#BF2A2D]"
-                                    : "bg-white border-gray-200 hover:border-[#BF2A2D]/50"
-                                )}
-                                onClick={() => {
-                                  setSelectedTables(selectedTables.includes(table)
-                                    ? selectedTables.filter(t => t !== table)
-                                    : [...selectedTables, table]
-                                  );
-                                }}
-                              >
-                                <input
-                                  type="checkbox"
-                                  className="accent-[#BF2A2D] mr-2"
-                                  checked={selectedTables.includes(table)}
-                                  onChange={e => {
-                                    // Prevent double toggle on div click
-                                    e.stopPropagation();
-                                    setSelectedTables(selectedTables.includes(table)
-                                      ? selectedTables.filter(t => t !== table)
-                                      : [...selectedTables, table]
-                                    );
-                                  }}
-                                  onClick={e => e.stopPropagation()}
-                                />
-                                <span className="font-medium">{table}</span>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          !loadingTables && (
-                            <div className="text-gray-400">No tables found.</div>
-                          )
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
+                    ) : (
+                      <p className="text-gray-500 text-center py-4">No tables available</p>
+                    )}
+                  </CardContent>
+                </Card>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
+
+          {/* Navigation */}
+          <div className="flex justify-center gap-4">
+            <Link to="/chat">
+              <Button variant="secondary">
+                <MessageCircle className="h-4 w-4" />
+                Go to Chat
+              </Button>
+            </Link>
+            <Link to="/retrieve-schema">
+              <Button variant="outline">
+                <Database className="h-4 w-4" />
+                View Schema
+              </Button>
+            </Link>
+            <Link to="/sql-query-executor">
+              <Button variant="outline">
+                <Database className="h-4 w-4" />
+                SQL Query Executor
+              </Button>
+            </Link>
+          </div>
         </div>
       </div>
     </div>
