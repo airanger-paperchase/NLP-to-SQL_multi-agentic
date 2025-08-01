@@ -9,7 +9,7 @@ router = APIRouter()
 class QuestionRequest(BaseModel):
     question: str
     company_code: str = None
-    company_name: str = None
+    site_code: str = None
 
 @router.post("/multi-agent")
 async def run_multi_agent(request: QuestionRequest):
@@ -26,8 +26,8 @@ async def run_multi_agent(request: QuestionRequest):
         # Process the question through the multi-agent system
         print(f"🤖 Multi-Agent: Processing question: {request.question}")
         print(f"🤖 Multi-Agent: Company Code: {request.company_code}")
-        print(f"🤖 Multi-Agent: Country: {request.company_name}")
-        result = await run_multi_agent_system(request.question, request.company_code, request.company_name)
+        print(f"🤖 Multi-Agent: Site Code: {request.site_code}")
+        result = await run_multi_agent_system(request.question, request.company_code, request.site_code)
         selected_table = result.get("selected_table", "")
         sql_query = result.get("sql_query", "")
         print(f"Selected Table: {selected_table}")
@@ -112,7 +112,7 @@ async def run_multi_agent(request: QuestionRequest):
             "agent_system": "multi-agent-orchestration",
             "company_info": {
                 "company_code": request.company_code,
-                "country": request.company_name
+                "site_code": request.site_code
             }
         }
         
@@ -141,8 +141,8 @@ async def get_multi_agent_status():
             "description-agent"
         ],
         "available_tables": [
-            "Vw_GI_SalesDetails",
-            "Vw_GI_SalesSummary", 
-            "Vw_GI_CompanyMaster"
+            "Vw_SI_SalesDetails",
+            "Vw_SI_SalesSummary", 
+            "View_DiscountDetails"
         ]
     }) 

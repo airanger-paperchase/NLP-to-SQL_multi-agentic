@@ -25,7 +25,7 @@ def get_database_info():
         cursor = conn.cursor()
         
         # Get information about the specified tables
-        tables = ['Vw_GI_SalesDetails', 'Vw_GI_SalesSummary', 'Vw_GI_CompanyMaster']
+        tables = ['Vw_SI_SalesDetails', 'Vw_SI_SalesSummary', 'View_DiscountDetails']
         db_info = {}
         
         for table_name in tables:
@@ -70,7 +70,7 @@ def get_database_schema():
         conn = pyodbc.connect(conn_str)
         cursor = conn.cursor()
         
-        tables = ['Vw_GI_SalesDetails', 'Vw_GI_SalesSummary', 'Vw_GI_CompanyMaster']
+        tables = ['Vw_SI_SalesDetails', 'Vw_SI_SalesSummary', 'View_DiscountDetails']
         schema_info = []
         
         for table_name in tables:
@@ -135,14 +135,14 @@ class QuerySQLServerPlugin:
         query_lower = sql_query.lower()
         
         # Check which table is mentioned in the query
-        tables = ['vw_gi_salesdetails', 'vw_gi_salessummary', 'vw_gi_companymaster']
+        tables = ['Vw_SI_salesdetails', 'Vw_SI_salessummary', 'View_DiscountDetails']
         
         for table in tables:
             if table in query_lower:
                 return table
         
         # Default to SalesSummary if no specific table mentioned
-        return 'vw_gi_salessummary'
+        return 'Vw_SI_salessummary'
 
     @kernel_function(name="query_sqlserver", description="Executes a SQL Server query on the available tables.")
     async def query_sqlserver(self, sql_query: str) -> str:
@@ -264,16 +264,16 @@ def generate_dynamic_prompt_template():
         - Use proper SQL Server window functions when needed
 
         COMMON QUERY PATTERNS:
-        - Basic data retrieval: SELECT TOP 20 * FROM dbo.Vw_GI_SalesSummary
-        - Filtered queries: SELECT TOP 20 * FROM dbo.Vw_GI_SalesSummary WHERE ColumnName = 'Value'
-        - Aggregation queries: SELECT TOP 20 ColumnName, COUNT(*) FROM dbo.Vw_GI_SalesSummary GROUP BY ColumnName ORDER BY COUNT(*) DESC
-        - Date range queries: SELECT TOP 20 * FROM dbo.Vw_GI_SalesSummary WHERE Date BETWEEN '2024-01-01' AND '2024-12-31'
-        - JOIN queries: SELECT TOP 20 t1.Col1, t2.Col2 FROM dbo.Vw_GI_SalesSummary t1 LEFT JOIN dbo.Vw_GI_SalesDetails t2 ON t1.Id = t2.Id
+        - Basic data retrieval: SELECT TOP 20 * FROM dbo.Vw_SI_SalesSummary
+        - Filtered queries: SELECT TOP 20 * FROM dbo.Vw_SI_SalesSummary WHERE ColumnName = 'Value'
+        - Aggregation queries: SELECT TOP 20 ColumnName, COUNT(*) FROM dbo.Vw_SI_SalesSummary GROUP BY ColumnName ORDER BY COUNT(*) DESC
+        - Date range queries: SELECT TOP 20 * FROM dbo.Vw_SI_SalesSummary WHERE Date BETWEEN '2024-01-01' AND '2024-12-31'
+        - JOIN queries: SELECT TOP 20 t1.Col1, t2.Col2 FROM dbo.Vw_SI_SalesSummary t1 LEFT JOIN dbo.Vw_SI_SalesDetails t2 ON t1.Id = t2.Id
 
         AVAILABLE TABLES:
-        - dbo.Vw_GI_SalesDetails: Detailed sales transaction data
-        - dbo.Vw_GI_SalesSummary: Summary sales data and metrics
-        - dbo.Vw_GI_CompanyMaster: Company and master data information
+        - dbo.Vw_SI_SalesDetails: Detailed sales transaction data
+        - dbo.Vw_SI_SalesSummary: Summary sales data and metrics
+        - dbo.View_DiscountDetails: Company and master data information
 
         IMPORTANT: Every query MUST use TOP 20 to ensure only the latest/most relevant 20 records are returned.
 
@@ -287,15 +287,15 @@ def generate_dynamic_prompt_template():
         - Multiple queries should be separated by semicolons on the same line or different lines
 
         EXAMPLE CORRECT OUTPUT:
-        SELECT TOP 20 CheckId, Date, Month, Year FROM dbo.Vw_GI_SalesSummary;
-        SELECT TOP 20 CheckId, Date, Month, Year FROM dbo.Vw_GI_SalesDetails;
+        SELECT TOP 20 CheckId, Date, Month, Year FROM dbo.Vw_SI_SalesSummary;
+        SELECT TOP 20 CheckId, Date, Month, Year FROM dbo.Vw_SI_SalesDetails;
 
         EXAMPLE INCORRECT OUTPUT:
         To compare data from both tables, I will generate two queries:
-        ### Query 1: Fetch data from Vw_GI_SalesSummary
-        SELECT TOP 20 CheckId, Date, Month, Year FROM dbo.Vw_GI_SalesSummary;
-        ### Query 2: Fetch data from Vw_GI_SalesDetails  
-        SELECT TOP 20 CheckId, Date, Month, Year FROM dbo.Vw_GI_SalesDetails;
+        ### Query 1: Fetch data from Vw_SI_SalesSummary
+        SELECT TOP 20 CheckId, Date, Month, Year FROM dbo.Vw_SI_SalesSummary;
+        ### Query 2: Fetch data from Vw_SI_SalesDetails  
+        SELECT TOP 20 CheckId, Date, Month, Year FROM dbo.Vw_SI_SalesDetails;
 
         INPUT JSON:
         {{input_text}}

@@ -371,9 +371,9 @@ def generate_dynamic_prompt_template():
         5. Generate queries that can be compared or combined in the analysis phase
 
         EXAMPLE MULTI-DATABASE SCENARIO:
-        If asked to compare Vw_GI_SalesSummary and Vw_GI_SalesDetails tables:
-        SELECT CheckId, Date, Month, Year, DayPart, RevenueCenter, CompanyCode, SiteCode FROM Vw_GI_SalesSummary LIMIT 20;
-        SELECT CheckId, Date, Month, Year, DayPart, RevenueCenter, CompanyCode, SiteCode FROM Vw_GI_SalesDetails LIMIT 20;
+        If asked to compare Vw_SI_SalesSummary and Vw_SI_SalesDetails tables:
+        SELECT CheckId, Date, Month, Year, DayPart, RevenueCenter, CompanyCode, SiteCode FROM Vw_SI_SalesSummary LIMIT 20;
+        SELECT CheckId, Date, Month, Year, DayPart, RevenueCenter, CompanyCode, SiteCode FROM Vw_SI_SalesDetails LIMIT 20;
 
         SQL GENERATION RULES:
         - ALWAYS limit results to the latest 20 records using LIMIT 20 at the end of every query
@@ -425,15 +425,15 @@ def generate_dynamic_prompt_template():
         - Multiple queries should be separated by semicolons on the same line or different lines
 
         EXAMPLE CORRECT OUTPUT:
-        SELECT CheckId, Date, Month, Year FROM Vw_GI_SalesSummary LIMIT 20;
-        SELECT CheckId, Date, Month, Year FROM Vw_GI_SalesDetails LIMIT 20;
+        SELECT CheckId, Date, Month, Year FROM Vw_SI_SalesSummary LIMIT 20;
+        SELECT CheckId, Date, Month, Year FROM Vw_SI_SalesDetails LIMIT 20;
 
         EXAMPLE INCORRECT OUTPUT:
         To compare data from both tables, I will generate two queries:
-        ### Query 1: Fetch data from Vw_GI_SalesSummary
-        SELECT CheckId, Date, Month, Year FROM Vw_GI_SalesSummary LIMIT 20;
-        ### Query 2: Fetch data from Vw_GI_SalesDetails  
-        SELECT CheckId, Date, Month, Year FROM Vw_GI_SalesDetails LIMIT 20;
+        ### Query 1: Fetch data from Vw_SI_SalesSummary
+        SELECT CheckId, Date, Month, Year FROM Vw_SI_SalesSummary LIMIT 20;
+        ### Query 2: Fetch data from Vw_SI_SalesDetails  
+        SELECT CheckId, Date, Month, Year FROM Vw_SI_SalesDetails LIMIT 20;
 
         INPUT JSON:
         {{input_text}}

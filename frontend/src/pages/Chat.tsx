@@ -61,7 +61,7 @@ interface SqlResponse {
 
 interface Company {
     companyCode: string;
-    country: string;
+    siteCode: string;
 }
 
 const Chat = () => {
@@ -73,41 +73,42 @@ const Chat = () => {
     const [selectedDatabase, setSelectedDatabase] = useState<string>("paperchase-sales-details");
     const [companies, setCompanies] = useState<Company[]>([]);
     const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
+    const [selectedSite, setSelectedSite] = useState<Company | null>(null);
     const [showCompanyDropdown, setShowCompanyDropdown] = useState(false);
-    const [searchTerm, setSearchTerm] = useState("");
+    const [showSiteDropdown, setShowSiteDropdown] = useState(false);
+    const [companySearchTerm, setCompanySearchTerm] = useState("");
+    const [siteSearchTerm, setSiteSearchTerm] = useState("");
 
     // Filter and sort companies based on search term with relevance scoring
-    const filteredCompanies = companies
-        .filter(company => 
-            company.country.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            company.companyCode.toLowerCase().includes(searchTerm.toLowerCase())
-        )
-        .sort((a, b) => {
-            if (!searchTerm) return 0;
+    const filteredCompanies = (companies || [])
+        .filter(company => {
+            if (!company || !company.companyCode) return false;
             
-            const searchLower = searchTerm.toLowerCase();
-            const aCountry = a.country.toLowerCase();
-            const bCountry = b.country.toLowerCase();
-            const aCode = a.companyCode.toLowerCase();
-            const bCode = b.companyCode.toLowerCase();
+            const searchLower = companySearchTerm.toLowerCase();
+            const companyCode = (company.companyCode || '').toLowerCase();
+            
+            return companyCode.includes(searchLower);
+        })
+        .sort((a, b) => {
+            if (!companySearchTerm) return 0;
+            
+            const searchLower = companySearchTerm.toLowerCase();
+            const aCode = (a.companyCode || '').toLowerCase();
+            const bCode = (b.companyCode || '').toLowerCase();
             
             // Calculate relevance scores
             const getRelevanceScore = (company: Company) => {
                 let score = 0;
-                const companyCountry = company.country.toLowerCase();
-                const companyCode = company.companyCode.toLowerCase();
+                const companyCode = (company.companyCode || '').toLowerCase();
                 
                 // Exact matches get highest score
-                if (companyCountry === searchLower || companyCode === searchLower) score += 1000;
+                if (companyCode === searchLower) score += 1000;
                 
                 // Starts with matches
-                if (companyCountry.startsWith(searchLower) || companyCode.startsWith(searchLower)) score += 500;
+                if (companyCode.startsWith(searchLower)) score += 500;
                 
-                // Code matches (higher priority than country)
+                // Contains matches
                 if (companyCode.includes(searchLower)) score += 100;
-                
-                // Country matches
-                if (companyCountry.includes(searchLower)) score += 50;
                 
                 return score;
             };
@@ -115,17 +116,62 @@ const Chat = () => {
             const aScore = getRelevanceScore(a);
             const bScore = getRelevanceScore(b);
             
-            // Debug logging
-            if (searchTerm) {
-                console.log(`Sorting: "${a.country} (${a.companyCode})" score: ${aScore}, "${b.country} (${b.companyCode})" score: ${bScore}`);
-            }
-            
             // Sort by score (highest first), then alphabetically
             if (aScore !== bScore) {
                 return bScore - aScore;
             }
             
-            return aCountry.localeCompare(bCountry);
+            return aCode.localeCompare(bCode);
+        });
+
+    // Filter sites for the selected company
+    const filteredSites = (companies || [])
+        .filter(company => {
+            if (!company || !selectedCompany) return false;
+            
+            const isMatchingCompany = company.companyCode === selectedCompany.companyCode;
+            if (!isMatchingCompany) return false;
+            
+            if (!siteSearchTerm) return true;
+            
+            const searchLower = siteSearchTerm.toLowerCase();
+            const siteCode = (company.siteCode || '').toLowerCase();
+            
+            return siteCode.includes(searchLower);
+        })
+        .sort((a, b) => {
+            if (!siteSearchTerm) return 0;
+            
+            const searchLower = siteSearchTerm.toLowerCase();
+            const aSiteCode = (a.siteCode || '').toLowerCase();
+            const bSiteCode = (b.siteCode || '').toLowerCase();
+            
+            // Calculate relevance scores for site codes
+            const getRelevanceScore = (company: Company) => {
+                let score = 0;
+                const siteCode = (company.siteCode || '').toLowerCase();
+                
+                // Exact matches get highest score
+                if (siteCode === searchLower) score += 1000;
+                
+                // Starts with matches
+                if (siteCode.startsWith(searchLower)) score += 500;
+                
+                // Contains matches
+                if (siteCode.includes(searchLower)) score += 100;
+                
+                return score;
+            };
+            
+            const aScore = getRelevanceScore(a);
+            const bScore = getRelevanceScore(b);
+            
+            // Sort by score (highest first), then by site code
+            if (aScore !== bScore) {
+                return bScore - aScore;
+            }
+            
+            return aSiteCode.localeCompare(bSiteCode);
         });
 
     const messageRef = useRef<HTMLDivElement>(null);
@@ -135,13 +181,17 @@ const Chat = () => {
         fetchCompanies();
     }, []);
 
-    // Close dropdown when clicking outside
+    // Close dropdowns when clicking outside
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             const target = event.target as Element;
             if (!target.closest('.company-dropdown')) {
                 setShowCompanyDropdown(false);
-                setSearchTerm(""); // Clear search when closing dropdown
+                setCompanySearchTerm(""); // Clear search when closing dropdown
+            }
+            if (!target.closest('.site-dropdown')) {
+                setShowSiteDropdown(false);
+                setSiteSearchTerm(""); // Clear search when closing dropdown
             }
         };
 
@@ -156,14 +206,30 @@ const Chat = () => {
             const response = await fetch('/api/get-companies');
             if (response.ok) {
                 const data = await response.json();
-                setCompanies(data.companies || []);
+                const companiesData = data.companies || [];
+                
+                // Ensure all companies have valid data
+                const validCompanies = companiesData.filter((company: any) => 
+                    company && 
+                    company.companyCode && 
+                    company.siteCode &&
+                    typeof company.companyCode === 'string' &&
+                    typeof company.siteCode === 'string'
+                );
+                
+                setCompanies(validCompanies);
+                
                 // Set first company as default if available
-                if (data.companies && data.companies.length > 0) {
-                    setSelectedCompany(data.companies[0]);
+                if (validCompanies.length > 0) {
+                    setSelectedCompany(validCompanies[0]);
                 }
+            } else {
+                console.error('Failed to fetch companies:', response.status, response.statusText);
+                setCompanies([]);
             }
         } catch (error) {
             console.error('Error fetching companies:', error);
+            setCompanies([]);
         }
     };
 
@@ -176,16 +242,24 @@ const Chat = () => {
         setIsLoading(true);
 
         try {
+            // Prepare request body - only include company and site codes if both are selected
+            const requestBody: any = {
+                question: input
+            };
+
+            // Only add company_code and site_code if both are selected
+            if (selectedCompany && selectedSite) {
+                requestBody.company_code = selectedCompany.companyCode;
+                requestBody.site_code = selectedSite.siteCode;
+            }
+            // If only company is selected but no site, don't send any company/site parameters
+
             const response = await fetch('/api/multi-agent', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({
-                    question: input,
-                    company_code: selectedCompany?.companyCode || null,
-                    company_name: selectedCompany?.country || null
-                }),
+                body: JSON.stringify(requestBody),
             });
 
             if (!response.ok) {
@@ -264,7 +338,7 @@ const Chat = () => {
                                     className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#BF2A2D] focus:border-transparent"
                                 >
                                     <span className="text-sm font-medium text-gray-700">
-                                        {selectedCompany ? `${selectedCompany.country} (${selectedCompany.companyCode})` : 'Select Company'}
+                                        {selectedCompany ? `${selectedCompany.companyCode}` : 'Select Company'}
                                     </span>
                                     <ChevronDown className="h-4 w-4 text-gray-500" />
                                 </button>
@@ -276,8 +350,8 @@ const Chat = () => {
                                             <input
                                                 type="text"
                                                 placeholder="Search country or code..."
-                                                value={searchTerm}
-                                                onChange={(e) => setSearchTerm(e.target.value)}
+                                                value={companySearchTerm}
+                                                onChange={(e) => setCompanySearchTerm(e.target.value)}
                                                 className="w-full px-3 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#BF2A2D] focus:border-transparent"
                                                 onClick={(e) => e.stopPropagation()}
                                             />
@@ -285,27 +359,88 @@ const Chat = () => {
                                         
                                         {/* Company List */}
                                         {filteredCompanies.length > 0 ? (
-                                            filteredCompanies.map((company) => (
+                                            filteredCompanies.map((company, index) => (
                                                 <button
-                                                    key={company.companyCode}
+                                                    key={`${company.companyCode}-${company.siteCode}-${index}`}
                                                     onClick={() => {
                                                         setSelectedCompany(company);
+                                                        setSelectedSite(null); // Reset site selection when company changes
                                                         setShowCompanyDropdown(false);
-                                                        setSearchTerm(""); // Clear search when selecting
+                                                        setCompanySearchTerm(""); // Clear search when selecting
                                                     }}
-                                                    className={`w-full text-left px-4 py-2 hover:bg-gray-100 ${
+                                                    className={`w-full text-left px-4 py-2 hover:bg-gray-300 hover:text-gray-700 ${
                                                         selectedCompany?.companyCode === company.companyCode 
                                                             ? 'bg-[#BF2A2D] text-white' 
                                                             : 'text-gray-700'
                                                     }`}
                                                 >
-                                                    <div className="font-medium">{company.country}</div>
-                                                    <div className="text-xs">Code: {company.companyCode}</div>
+                                                    <div className="font-medium">{company.companyCode}</div>
+                                                    <div className="text-xs">Site: {company.siteCode}</div>
                                                 </button>
                                             ))
                                         ) : (
                                             <div className="px-4 py-2 text-sm text-gray-500 text-center">
                                                 No companies found
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Site Selection Dropdown */}
+                            <div className="relative site-dropdown z-[9999]">
+                                <button
+                                    onClick={() => setShowSiteDropdown(!showSiteDropdown)}
+                                    disabled={!selectedCompany}
+                                    className={`flex items-center gap-2 px-4 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#BF2A2D] focus:border-transparent ${
+                                        selectedCompany 
+                                            ? 'bg-white border-gray-300 hover:bg-gray-50' 
+                                            : 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed'
+                                    }`}
+                                >
+                                    <span className="text-sm font-medium">
+                                        {selectedSite ? `Site ${selectedSite.siteCode}` : 'Select Site'}
+                                    </span>
+                                    <ChevronDown className="h-4 w-4" />
+                                </button>
+                                
+                                {showSiteDropdown && selectedCompany && (
+                                    <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-300 rounded-lg shadow-xl z-[9999] max-h-60 overflow-y-auto">
+                                        {/* Search Input */}
+                                        <div className="sticky top-0 bg-white p-2 border-b border-gray-200">
+                                            <input
+                                                type="text"
+                                                placeholder="Search site code..."
+                                                value={siteSearchTerm}
+                                                onChange={(e) => setSiteSearchTerm(e.target.value)}
+                                                className="w-full px-3 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#BF2A2D] focus:border-transparent"
+                                                onClick={(e) => e.stopPropagation()}
+                                            />
+                                        </div>
+                                        
+                                        {/* Site List */}
+                                        {filteredSites.length > 0 ? (
+                                            filteredSites.map((site, index) => (
+                                                <button
+                                                    key={`${site.companyCode}-${site.siteCode}-${index}`}
+                                                    onClick={() => {
+                                                        setSelectedSite(site);
+                                                        setShowSiteDropdown(false);
+                                                        setSiteSearchTerm(""); // Clear search when selecting
+                                                    }}
+                                                    className={`w-full text-left px-4 py-2 hover:bg-gray-100 hover:text-gray-700 ${
+                                                        selectedSite?.siteCode === site.siteCode 
+                                                            ? 'bg-[#BF2A2D] text-white' 
+                                                            : 'text-gray-700'
+                                                    }`}
+                                                >
+                                                    <div className="font-medium">Site {site.siteCode}</div>
+                                                    <div className="text-xs">{site.companyCode}</div>
+                                                </button>
+                                            ))
+                                        ) : (
+                                            <div className="px-4 py-2 text-sm text-gray-500 text-center">
+                                                No sites found
                                             </div>
                                         )}
                                     </div>

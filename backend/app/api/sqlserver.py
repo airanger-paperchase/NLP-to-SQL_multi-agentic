@@ -21,7 +21,7 @@ def get_sql_server_connection_string():
     )
 
 # Available tables in SQL Server
-AVAILABLE_TABLES = ['Vw_GI_SalesDetails', 'Vw_GI_SalesSummary', 'Vw_GI_CompanyMaster']
+AVAILABLE_TABLES = ['Vw_SI_SalesDetails', 'Vw_SI_SalesSummary', 'View_DiscountDetails']
 
 class ConnectionRequest(BaseModel):
     server: str
@@ -600,16 +600,16 @@ async def update_description(
 
 @router.get("/get-companies")
 async def get_companies():
-    """Get all companies from Vw_GI_CompanyMaster table"""
+    """Get all company and site codes from View_DiscountDetails table"""
     try:
         query = """
         SELECT DISTINCT 
             CompanyCode,
-            Country
-        FROM Vw_GI_CompanyMaster 
+            SiteCode
+        FROM View_DiscountDetails 
         WHERE CompanyCode IS NOT NULL 
-        AND Country IS NOT NULL
-        ORDER BY Country, CompanyCode
+        AND SiteCode IS NOT NULL
+        ORDER BY CompanyCode, SiteCode
         """
         
         results = execute_sql_server_query(query)
@@ -618,7 +618,7 @@ async def get_companies():
         for row in results:
             companies.append({
                 "companyCode": str(row.get('CompanyCode', '')),
-                "country": row.get('Country', '')
+                "siteCode": str(row.get('SiteCode', ''))
             })
         
         return {"companies": companies}

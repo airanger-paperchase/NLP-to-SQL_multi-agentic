@@ -35,7 +35,7 @@ def compare_system_messages():
     # Create a test table context
     table_manager = TableDataManager()
     test_context = {
-        'table_name': 'Vw_GI_SalesSummary',
+        'table_name': 'Vw_SI_SalesSummary',
         'description': 'Summary sales data and metrics',
         'business_context': 'Contains aggregated sales information, totals, and summary metrics for business analysis',
         'schema': [
@@ -49,7 +49,7 @@ def compare_system_messages():
         ]
     }
     
-    table_agent = TableSpecialistAgent('Vw_GI_SalesSummary', test_context)
+    table_agent = TableSpecialistAgent('Vw_SI_SalesSummary', test_context)
     multi_agent_prompt = table_agent.generate_table_prompt()
     
     print(f"Length: {len(multi_agent_prompt)} characters")

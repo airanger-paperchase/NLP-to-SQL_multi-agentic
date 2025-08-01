@@ -22,15 +22,15 @@ class TableDataManager:
     
     def __init__(self):
         self.table_configs = {
-            'Vw_GI_SalesDetails': {
+            'Vw_SI_SalesDetails': {
                 'description': 'Detailed sales transaction data with individual line items',
                 'business_context': 'Contains granular sales data including individual items sold, quantities, prices, and transaction details'
             },
-            'Vw_GI_SalesSummary': {
+            'Vw_SI_SalesSummary': {
                 'description': 'Summary sales data and metrics',
                 'business_context': 'Contains aggregated sales information, totals, and summary metrics for business analysis'
             },
-            'Vw_GI_CompanyMaster': {
+            'View_DiscountDetails': {
                 'description': 'Company and master data information',
                 'business_context': 'Contains company details, master data, and reference information'
             }
@@ -150,9 +150,9 @@ class RouterAgent:
         5. Consider the business context of each table when making your decision
         
         DECISION CRITERIA:
-        - Vw_GI_SalesDetails: Questions about individual items, line-level details, specific transactions
-        - Vw_GI_SalesSummary: Questions about totals, summaries, aggregated data, business metrics
-        - Vw_GI_CompanyMaster: Questions about company information, master data, reference data
+        - Vw_SI_SalesDetails: Questions about individual items, line-level details, specific transactions
+        - Vw_SI_SalesSummary: Questions about totals, summaries, aggregated data, business metrics
+        - View_DiscountDetails: Questions about company information, master data, reference data
         
         RESPONSE FORMAT:
         Return ONLY a JSON object with the following structure:
@@ -163,9 +163,9 @@ class RouterAgent:
         }}
         
         EXAMPLE RESPONSES:
-        - For "Show me total sales by month": {{"selected_table": "Vw_GI_SalesSummary", "confidence": "high", "reasoning": "Question asks for totals and summaries"}}
-        - For "What items were sold in transaction 123": {{"selected_table": "Vw_GI_SalesDetails", "confidence": "high", "reasoning": "Question asks for individual line items"}}
-        - For "Company information": {{"selected_table": "Vw_GI_CompanyMaster", "confidence": "high", "reasoning": "Question asks for company/master data"}}
+        - For "Show me total sales by month": {{"selected_table": "Vw_SI_SalesSummary", "confidence": "high", "reasoning": "Question asks for totals and summaries"}}
+        - For "What items were sold in transaction 123": {{"selected_table": "Vw_SI_SalesDetails", "confidence": "high", "reasoning": "Question asks for individual line items"}}
+        - For "Company information": {{"selected_table": "View_DiscountDetails", "confidence": "high", "reasoning": "Question asks for company/master data"}}
         
         USER QUESTION: {{user_question}}
         
@@ -212,34 +212,34 @@ class RouterAgent:
                 
                 # Default to SalesSummary if no clear match
                 default_decision = {
-                    "selected_table": "Vw_GI_SalesSummary",
+                    "selected_table": "Vw_SI_SalesSummary",
                     "confidence": "low",
                     "reasoning": "Default fallback"
                 }
-                print(f"🔄 ROUTER AGENT: Default fallback - Selected Table: Vw_GI_SalesSummary")
+                print(f"🔄 ROUTER AGENT: Default fallback - Selected Table: Vw_SI_SalesSummary")
                 return default_decision
                 
         except Exception as e:
             print(f"🔄 ROUTER AGENT: Error occurred: {e}")
             error_decision = {
-                "selected_table": "Vw_GI_SalesSummary",
+                "selected_table": "Vw_SI_SalesSummary",
                 "confidence": "low",
                 "reasoning": f"Error occurred: {str(e)}"
             }
-            print(f"🔄 ROUTER AGENT: Error fallback - Selected Table: Vw_GI_SalesSummary")
+            print(f"🔄 ROUTER AGENT: Error fallback - Selected Table: Vw_SI_SalesSummary")
             return error_decision
 
 class TableSpecialistAgent:
     """Specialized agent for a specific table"""
     
-    def __init__(self, table_name: str, table_context: dict, company_code: str = None, company_name: str = None):
+    def __init__(self, table_name: str, table_context: dict, company_code: str = None, site_code: str = None):
         self.table_name = table_name
         self.table_context = table_context
         self.company_code = company_code
-        self.company_name = company_name
+        self.site_code = site_code
         print(f"\n🔧 TABLE SPECIALIST AGENT: Created for table '{table_name}'")
         print(f"🔧 TABLE SPECIALIST AGENT: Company Code: {company_code}")
-        print(f"🔧 TABLE SPECIALIST AGENT: Country: {company_name}")
+        print(f"🔧 TABLE SPECIALIST AGENT: Site Code: {site_code}")
         print(f"🔧 TABLE SPECIALIST AGENT: Table description: {table_context.get('description', 'N/A')}")
         print(f"🔧 TABLE SPECIALIST AGENT: Business context: {table_context.get('business_context', 'N/A')}")
         print(f"🔧 TABLE SPECIALIST AGENT: Schema columns: {len(table_context.get('schema', []))}")
@@ -264,15 +264,29 @@ class TableSpecialistAgent:
         
         sample_data_str = json.dumps(self.table_context['sample_data'], indent=2, default=str)
         
-        # Company filter clause
+        # Company and Site filter clause - only apply if both company_code and site_code are provided
         company_filter = ""
-        if self.company_code:
+        if self.company_code and self.site_code:
+            company_filter = f"""
+            COMPANY AND SITE FILTER:
+            - Company Code: {self.company_code}
+            - Site Code: {self.site_code}
+            - Always filter by CompanyCode = '{self.company_code}' AND SiteCode = '{self.site_code}' in WHERE clause
+            - This ensures data is specific to the selected company and site: {self.company_code}/{self.site_code}
+            """
+        elif self.company_code and not self.site_code:
             company_filter = f"""
             COMPANY FILTER:
             - Company Code: {self.company_code}
-            - Country: {self.company_name or 'N/A'}
+            - Site Code: Not selected
             - Always filter by CompanyCode = '{self.company_code}' in WHERE clause
-            - This ensures data is specific to the selected company: {self.company_name or self.company_code}
+            - This ensures data is specific to the selected company: {self.company_code}
+            """
+        else:
+            company_filter = """
+            NO COMPANY/SITE FILTER:
+            - No company or site filters will be applied
+            - Query will return data for all companies and sites
             """
         
         return f"""
@@ -316,7 +330,8 @@ class TableSpecialistAgent:
         # Never use NULLIF() function
 
         ### SQL Constraints:
-        # CompanyCode = '{self.company_code}' (if provided)
+        {f"# CompanyCode = '{self.company_code}'" if self.company_code else "# No company filter"}
+        {f"# SiteCode = '{self.site_code}'" if self.site_code else "# No site filter"}
         # always use SQL Server query syntax
         # always use year column in select if its used in where condition
         # never use 'STR_TO_DATE' function as its not available for MSSQL
@@ -351,7 +366,7 @@ class TableSpecialistAgent:
         # Month column includes Month names January, February, March, April, May, June, July, August, September, October, November, December
 
         SQL GENERATION RULES:
-        - ALWAYS limit results to the latest 20 records using TOP 20 at the end of every query
+        - ALWAYS limit results to the latest 100 records using TOP 100 at the end of every query
         - Always use appropriate table based on the query requirements
         - Use proper date formatting (YYYY-MM-DD) when filtering by dates
         - Always use appropriate data types (DATETIME for dates, DECIMAL for amounts)
@@ -359,7 +374,7 @@ class TableSpecialistAgent:
         - For date ranges, use proper date comparison functions
         - Always include relevant columns in SELECT clause
         - Use appropriate aggregation functions (SUM, COUNT, AVG) for summary queries
-        - For aggregation queries, apply TOP 20 after ORDER BY clause
+        - For aggregation queries, apply TOP 100 after ORDER BY clause
         - Use proper SQL Server date functions (GETDATE(), DATEADD, DATEDIFF)
 
         SQL SERVER-SPECIFIC RULES:
@@ -374,16 +389,16 @@ class TableSpecialistAgent:
         - Use proper SQL Server window functions when needed
 
         COMMON QUERY PATTERNS:
-        - Basic data retrieval: SELECT TOP 20 * FROM dbo.{self.table_name}
-        - Filtered queries: SELECT TOP 20 * FROM dbo.{self.table_name} WHERE ColumnName = 'Value'
-        - Aggregation queries: SELECT TOP 20 ColumnName, COUNT(*) FROM dbo.{self.table_name} GROUP BY ColumnName ORDER BY COUNT(*) DESC
-        - Date range queries: SELECT TOP 20 * FROM dbo.{self.table_name} WHERE Date BETWEEN '2024-01-01' AND '2024-12-31'
-        - JOIN queries: SELECT TOP 20 t1.Col1, t2.Col2 FROM dbo.{self.table_name} t1 LEFT JOIN dbo.Vw_GI_SalesDetails t2 ON t1.Id = t2.Id
+        - Basic data retrieval: SELECT TOP 100 * FROM dbo.{self.table_name}
+        - Filtered queries: SELECT TOP 100 * FROM dbo.{self.table_name} WHERE ColumnName = 'Value'
+        - Aggregation queries: SELECT TOP 100 ColumnName, COUNT(*) FROM dbo.{self.table_name} GROUP BY ColumnName ORDER BY COUNT(*) DESC
+        - Date range queries: SELECT TOP 100 * FROM dbo.{self.table_name} WHERE Date BETWEEN '2024-01-01' AND '2024-12-31'
+        - JOIN queries: SELECT TOP 100 t1.Col1, t2.Col2 FROM dbo.{self.table_name} t1 LEFT JOIN dbo.Vw_SI_SalesDetails t2 ON t1.Id = t2.Id
 
         AVAILABLE TABLE:
         - dbo.{self.table_name}: {self.table_context['description']}
 
-        IMPORTANT: Every query MUST use TOP 20 to ensure only the latest/most relevant 20 records are returned.
+        IMPORTANT: Every query MUST use TOP 100 to ensure only the latest/most relevant 100 records are returned.
 
         CRITICAL OUTPUT RULES:
         - Return ONLY SQL queries separated by semicolons
@@ -395,12 +410,12 @@ class TableSpecialistAgent:
         - Multiple queries should be separated by semicolons on the same line or different lines
 
         EXAMPLE CORRECT OUTPUT:
-        SELECT TOP 20 CheckId, Date, Month, Year FROM dbo.{self.table_name};
+        SELECT TOP 100 CheckId, Date, Month, Year FROM dbo.{self.table_name};
 
         EXAMPLE INCORRECT OUTPUT:
         To get data from the table, I will generate a query:
         ### Query: Fetch data from {self.table_name}
-        SELECT TOP 20 CheckId, Date, Month, Year FROM dbo.{self.table_name};
+        SELECT TOP 100 CheckId, Date, Month, Year FROM dbo.{self.table_name};
 
         INPUT JSON:
         {{user_question}}
@@ -473,12 +488,12 @@ class MultiAgentOrchestrator:
             )
         )
     
-    async def process_question(self, user_question: str, company_code: str = None, company_name: str = None) -> dict:
+    async def process_question(self, user_question: str, company_code: str = None, site_code: str = None) -> dict:
         """Process a user question through the multi-agent system"""
         try:
             print(f"\n🚀 MULTI-AGENT ORCHESTRATOR: Starting to process question: '{user_question}'")
             print(f"🚀 MULTI-AGENT ORCHESTRATOR: Company Code: {company_code}")
-            print(f"🚀 MULTI-AGENT ORCHESTRATOR: Country: {company_name}")
+            print(f"🚀 MULTI-AGENT ORCHESTRATOR: Site Code: {site_code}")
             
             # Step 1: Route the question to appropriate table
             print(f"\n📋 STEP 1: ROUTING - Calling Router Agent...")
@@ -499,7 +514,7 @@ class MultiAgentOrchestrator:
             
             # Step 3: Create table specialist agent
             print(f"\n📋 STEP 3: TABLE SPECIALIST - Creating Table Specialist Agent...")
-            table_agent = TableSpecialistAgent(selected_table, table_context, company_code, company_name)
+            table_agent = TableSpecialistAgent(selected_table, table_context, company_code, site_code)
             print(f"✅ STEP 3: TABLE SPECIALIST - Table Specialist Agent created successfully")
             
             # Step 4: Generate SQL query
@@ -523,7 +538,7 @@ class MultiAgentOrchestrator:
             print(f"\n📋 STEP 5: QUERY EXECUTION - Executing SQL query...")
             query_result = await self.query_executor.execute_query(sql_query)
             print(f"📋 STEP 5: QUERY EXECUTION - Query result length: {len(str(query_result))} characters")
-            print(f"📋 STEP 5: QUERY EXECUTION - Query result preview: {str(query_result)[:200]}...")
+            print(f"📋 STEP 5: QUERY EXECUTION - Query result preview: {str(query_result)[:100]}...")
             
             # Step 6: Generate description
             print(f"\n📋 STEP 6: DESCRIPTION - Generating business description...")
@@ -531,7 +546,7 @@ class MultiAgentOrchestrator:
                 query_result, sql_query, user_question
             )
             print(f"📋 STEP 6: DESCRIPTION - Description length: {len(description)} characters")
-            print(f"📋 STEP 6: DESCRIPTION - Description preview: {description[:200]}...")
+            print(f"📋 STEP 6: DESCRIPTION - Description preview: {description[:100]}...")
             
             print(f"\n🎉 MULTI-AGENT ORCHESTRATOR: All steps completed successfully!")
             
@@ -619,12 +634,12 @@ class MultiAgentOrchestrator:
             return "I don't have data for this query. Please try another question."
 
 # Main function to use the orchestrator
-async def run_multi_agent_system(question: str, company_code: str = None, company_name: str = None) -> dict:
+async def run_multi_agent_system(question: str, company_code: str = None, site_code: str = None) -> dict:
     """Main function to run the multi-agent system"""
     print(f"\n🎬 MULTI-AGENT SYSTEM: Starting multi-agent system...")
     print(f"🎬 MULTI-AGENT SYSTEM: Question received: '{question}'")
     print(f"🎬 MULTI-AGENT SYSTEM: Company Code: {company_code}")
-    print(f"🎬 MULTI-AGENT SYSTEM: Country: {company_name}")
+    print(f"🎬 MULTI-AGENT SYSTEM: Site Code: {site_code}")
     
     if not question or not question.strip():
         print(f"❌ MULTI-AGENT SYSTEM: Error - No question provided")
@@ -635,6 +650,6 @@ async def run_multi_agent_system(question: str, company_code: str = None, compan
     print(f"🎬 MULTI-AGENT SYSTEM: MultiAgentOrchestrator created successfully")
     print(f"🎬 MULTI-AGENT SYSTEM: Starting to process question...")
     
-    result = await orchestrator.process_question(question.strip(), company_code, company_name)
+    result = await orchestrator.process_question(question.strip(), company_code, site_code)
     print(f"🎬 MULTI-AGENT SYSTEM: Processing completed. Result keys: {list(result.keys())}")
     return result 

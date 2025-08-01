@@ -21,8 +21,8 @@ This guide will help you set up the frontend and backend for the Paperchase ERP 
    ```
 
 3. **Database Connection**: The system is configured to connect to your existing SQLite databases:
-   - `Vw_GI_SalesDetails 1.db` (31MB) - Contains detailed sales transaction data
-   - `Vw_GI_SalesSummary 1.db` (2.7MB) - Contains summarized sales data
+   - `Vw_SI_SalesDetails 1.db` (31MB) - Contains detailed sales transaction data
+   - `Vw_SI_SalesSummary 1.db` (2.7MB) - Contains summarized sales data
    
    These databases are located in the root directory and contain your existing tables and data.
 

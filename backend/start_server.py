@@ -14,7 +14,7 @@ if __name__ == "__main__":
     print("Starting Paperchase ERP Backend with SQL Server...")
     print("Server: 10.0.40.20")
     print("Database: DataWarehouseV2_UK")
-    print("Available Tables: Vw_GI_SalesDetails, Vw_GI_SalesSummary, Vw_GI_CompanyMaster")
+    print("Available Tables: Vw_SI_SalesDetails, Vw_SI_SalesSummary, View_DiscountDetails")
     print("\nStarting server on http://localhost:8000")
     print("Press Ctrl+C to stop the server")
     

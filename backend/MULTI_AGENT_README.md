@@ -50,9 +50,9 @@ Final Response
 
 | Table | Description | Business Context |
 |-------|-------------|------------------|
-| `Vw_GI_SalesDetails` | Detailed sales transaction data | Individual line items, quantities, prices |
-| `Vw_GI_SalesSummary` | Summary sales data and metrics | Aggregated totals, business metrics |
-| `Vw_GI_CompanyMaster` | Company and master data | Company details, reference information |
+| `Vw_SI_SalesDetails` | Detailed sales transaction data | Individual line items, quantities, prices |
+| `Vw_SI_SalesSummary` | Summary sales data and metrics | Aggregated totals, business metrics |
+| `View_DiscountDetails` | Company and master data | Company details, reference information |
 
 ## 🚀 Usage
 
@@ -79,12 +79,12 @@ GET /api/multi-agent/status
 {
     "success": true,
     "routing_decision": {
-        "selected_table": "Vw_GI_SalesSummary",
+        "selected_table": "Vw_SI_SalesSummary",
         "confidence": "high",
         "reasoning": "Question asks for totals and summaries"
     },
-    "selected_table": "Vw_GI_SalesSummary",
-    "sql_query": "SELECT TOP 20 Month, SUM(TotalAmount) as TotalSales FROM dbo.Vw_GI_SalesSummary GROUP BY Month ORDER BY Month",
+    "selected_table": "Vw_SI_SalesSummary",
+    "sql_query": "SELECT TOP 20 Month, SUM(TotalAmount) as TotalSales FROM dbo.Vw_SI_SalesSummary GROUP BY Month ORDER BY Month",
     "data": [
         {
             "Month": "January",
