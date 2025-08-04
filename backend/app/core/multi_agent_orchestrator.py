@@ -448,6 +448,18 @@ class TableSpecialistAgent:
         {f"- For CategoryName: INNER JOIN dbo.Vw_SI_CategoryDetails cd ON main.CategoryId = cd.CategoryId" if self.table_name == 'Vw_SI_SalesDetails' else "- CategoryName joins not available for this table (CategoryId column not present)"}
         {f"- For SubCategoryName: INNER JOIN dbo.MenuItemCategoryMst micm ON main.CategoryId = micm.CategoryId" if self.table_name == 'Vw_SI_SalesDetails' else "- SubCategoryName joins not available for this table (CategoryId column not present)"}
         - CRITICAL: Use Vw_SI_CategoryDetails for category joins
+        
+        MONTH COMPARISON RULES:
+        - When user asks for specific month comparison (e.g., "compare January and February", "sales in March vs April"), ONLY query for those specific months
+        - DO NOT query for all months or every month when specific months are requested
+        - Use Month IN ('Month1', 'Month2') for specific month comparisons
+        - For month comparisons, use WHERE Month IN ('January', 'February') instead of GROUP BY Month
+        - When comparing specific months, include both months in the same query with proper filtering
+        - For month-to-month comparisons, use CASE statements to create separate columns for each month
+        - Example: "Compare January and February sales" should use WHERE Month IN ('January', 'February') and GROUP BY with CASE statements
+        - If user asks for "all months" or "every month", then use GROUP BY Month to get all months
+        - If user asks for "monthly" without specifying which months, use GROUP BY Month to get all months
+        - Month names are: January, February, March, April, May, June, July, August, September, October, November, December
         - For CategoryName, always use dbo.Vw_SI_CategoryDetails table
         - For SubCategoryName, always use dbo.MenuItemCategoryMst table
 
@@ -469,6 +481,11 @@ class TableSpecialistAgent:
         - Date range queries: SELECT TOP 100 * FROM dbo.{self.table_name} WHERE Date BETWEEN '2024-01-01' AND '2024-12-31'
         - Sales by DayPart: SELECT TOP 100 DayPart, FORMAT(SUM(NetAmount), 'N0', 'en-GB') AS TotalSales FROM dbo.{self.table_name} GROUP BY DayPart ORDER BY TotalSales DESC
         - Sales by RevenueCenter: SELECT TOP 100 RevenueCenter, FORMAT(SUM(NetAmount), 'N0', 'en-GB') AS TotalSales FROM dbo.{self.table_name} GROUP BY RevenueCenter ORDER BY TotalSales DESC
+        
+        MONTH COMPARISON PATTERNS:
+        - Specific month comparison: SELECT TOP 100 Month, FORMAT(SUM(NetAmount), 'N0', 'en-GB') AS TotalSales FROM dbo.{self.table_name} WHERE Month IN ('January', 'February') GROUP BY Month ORDER BY Month
+        - Month-to-month comparison with CASE: SELECT TOP 100 FORMAT(SUM(CASE WHEN Month = 'January' THEN NetAmount ELSE 0 END), 'N0', 'en-GB') AS JanuarySales, FORMAT(SUM(CASE WHEN Month = 'February' THEN NetAmount ELSE 0 END), 'N0', 'en-GB') AS FebruarySales FROM dbo.{self.table_name} WHERE Month IN ('January', 'February')
+        - All months (when requested): SELECT TOP 100 Month, FORMAT(SUM(NetAmount), 'N0', 'en-GB') AS TotalSales FROM dbo.{self.table_name} GROUP BY Month ORDER BY CASE Month WHEN 'January' THEN 1 WHEN 'February' THEN 2 WHEN 'March' THEN 3 WHEN 'April' THEN 4 WHEN 'May' THEN 5 WHEN 'June' THEN 6 WHEN 'July' THEN 7 WHEN 'August' THEN 8 WHEN 'September' THEN 9 WHEN 'October' THEN 10 WHEN 'November' THEN 11 WHEN 'December' THEN 12 END
         
         INNER JOIN PATTERNS:
         - Sales with DayPartName: SELECT TOP 100 main.DayPart, dp.DayPartName, FORMAT(SUM(main.NetAmount), 'N0', 'en-GB') AS TotalSales FROM dbo.{self.table_name} main INNER JOIN dbo.DayPartMst dp ON main.DayPart = dp.DayPart GROUP BY main.DayPart, dp.DayPartName ORDER BY TotalSales DESC
@@ -513,6 +530,11 @@ class TableSpecialistAgent:
 
         EXAMPLE CORRECT OUTPUT:
         SELECT TOP 100 CheckId, Date, Month, Year FROM dbo.{self.table_name};
+
+        MONTH COMPARISON EXAMPLES:
+        - For "Compare January and February sales": SELECT TOP 100 Month, FORMAT(SUM(NetAmount), 'N0', 'en-GB') AS TotalSales FROM dbo.{self.table_name} WHERE Month IN ('January', 'February') GROUP BY Month ORDER BY Month
+        - For "Sales in March vs April": SELECT TOP 100 FORMAT(SUM(CASE WHEN Month = 'March' THEN NetAmount ELSE 0 END), 'N0', 'en-GB') AS MarchSales, FORMAT(SUM(CASE WHEN Month = 'April' THEN NetAmount ELSE 0 END), 'N0', 'en-GB') AS AprilSales FROM dbo.{self.table_name} WHERE Month IN ('March', 'April')
+        - For "All months sales": SELECT TOP 100 Month, FORMAT(SUM(NetAmount), 'N0', 'en-GB') AS TotalSales FROM dbo.{self.table_name} GROUP BY Month ORDER BY CASE Month WHEN 'January' THEN 1 WHEN 'February' THEN 2 WHEN 'March' THEN 3 WHEN 'April' THEN 4 WHEN 'May' THEN 5 WHEN 'June' THEN 6 WHEN 'July' THEN 7 WHEN 'August' THEN 8 WHEN 'September' THEN 9 WHEN 'October' THEN 10 WHEN 'November' THEN 11 WHEN 'December' THEN 12 END
 
         EXAMPLE INCORRECT OUTPUT:
         To get data from the table, I will generate a query:

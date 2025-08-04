@@ -72,8 +72,14 @@ const Chat = () => {
     const [tableData, setTableData] = useState<any[]>([]);
     const [selectedDatabase, setSelectedDatabase] = useState<string>("paperchase-sales-details");
     const [companies, setCompanies] = useState<Company[]>([]);
-    const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
-    const [selectedSite, setSelectedSite] = useState<Company | null>(null);
+    const [selectedCompany, setSelectedCompany] = useState<Company | null>({
+        companyCode: "C1587",
+        siteCode: "L2312"
+    });
+    const [selectedSite, setSelectedSite] = useState<Company | null>({
+        companyCode: "C1587",
+        siteCode: "L2312"
+    });
     const [showCompanyDropdown, setShowCompanyDropdown] = useState(false);
     const [showSiteDropdown, setShowSiteDropdown] = useState(false);
     const [companySearchTerm, setCompanySearchTerm] = useState("");
@@ -217,19 +223,33 @@ const Chat = () => {
                     typeof company.siteCode === 'string'
                 );
                 
-                setCompanies(validCompanies);
+                // Add static company/site to the list
+                const staticCompany = {
+                    companyCode: "C1587",
+                    siteCode: "L2312"
+                };
                 
-                // Set first company as default if available
-                if (validCompanies.length > 0) {
-                    setSelectedCompany(validCompanies[0]);
-                }
+                // Add static company at the beginning of the list
+                const allCompanies = [staticCompany, ...validCompanies];
+                
+                setCompanies(allCompanies);
+                
+                // Keep the static values as selected (they're already set in useState)
             } else {
                 console.error('Failed to fetch companies:', response.status, response.statusText);
-                setCompanies([]);
+                // Even if API fails, we still have the static values
+                setCompanies([{
+                    companyCode: "C1587",
+                    siteCode: "L2312"
+                }]);
             }
         } catch (error) {
             console.error('Error fetching companies:', error);
-            setCompanies([]);
+            // Even if API fails, we still have the static values
+            setCompanies([{
+                companyCode: "C1587",
+                siteCode: "L2312"
+            }]);
         }
     };
 
@@ -244,14 +264,16 @@ const Chat = () => {
         try {
             // Prepare request body - only include company and site codes if both are selected
             const requestBody: any = {
-                question: input
+                question: input,
+                company_code: "C1587",
+                site_code: "L2312"
             };
 
-            // Only add company_code and site_code if both are selected
-            if (selectedCompany && selectedSite) {
-                requestBody.company_code = selectedCompany.companyCode;
-                requestBody.site_code = selectedSite.siteCode;
-            }
+            // // Only add company_code and site_code if both are selected
+            // if (selectedCompany && selectedSite) {
+            //     requestBody.company_code = selectedCompany.companyCode;
+            //     requestBody.site_code = selectedSite.siteCode;
+            // }
             // If only company is selected but no site, don't send any company/site parameters
 
             const response = await fetch('/api/multi-agent', {
