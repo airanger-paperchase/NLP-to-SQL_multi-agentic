@@ -19,8 +19,7 @@ const PurchaseOrderChart = ({ data }: { data: DynamicData[] }) => {
         if (columns.length > 1) {
             setXAxisKey(columns[0]);
             setYAxisKey(columns[1]);
-        } else if (columns.length === 1) {
-            console.error("Only one column found in the data. Please provide more data.");
+        } else if (columns.length === 1) {p.er
             setXAxisKey(columns[0]);
             setYAxisKey("");
         }
