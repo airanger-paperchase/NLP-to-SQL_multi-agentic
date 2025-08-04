@@ -9,7 +9,7 @@ router = APIRouter()
 class QuestionRequest(BaseModel):
     question: str
     company_code: str = None
-    company_name: str = None
+    site_code: str = None
 
 @router.post("/multi-agent")
 async def run_multi_agent(request: QuestionRequest):
@@ -26,8 +26,8 @@ async def run_multi_agent(request: QuestionRequest):
         # Process the question through the multi-agent system
         print(f"🤖 Multi-Agent: Processing question: {request.question}")
         print(f"🤖 Multi-Agent: Company Code: {request.company_code}")
-        print(f"🤖 Multi-Agent: Country: {request.company_name}")
-        result = await run_multi_agent_system(request.question, request.company_code, request.company_name)
+        print(f"🤖 Multi-Agent: Site Code: {request.site_code}")
+        result = await run_multi_agent_system(request.question, request.company_code, request.site_code)
         selected_table = result.get("selected_table", "")
         sql_query = result.get("sql_query", "")
         print(f"Selected Table: {selected_table}")
@@ -46,54 +46,13 @@ async def run_multi_agent(request: QuestionRequest):
         routing_decision = result.get("routing_decision", {})
         selected_table = result.get("selected_table", "")
         sql_query = result.get("sql_query", "")
-        query_result = result.get("query_result", "")
+        data = result.get("data", [])  # New format: data is already structured
         description = result.get("description", "")
+        answer = result.get("answer", "")
         
-        # Process the query result to convert to structured data
-        processed_data = []
-        error_messages = []
-        
-        if isinstance(query_result, str):
-            if any(error_msg in query_result.lower() for error_msg in ['error', 'no results found', 'not found', 'empty']):
-                error_messages.append(query_result)
-            elif '\t' in query_result:
-                # Handle tab-separated multi-column data
-                lines = query_result.strip().split('\n')
-                if len(lines) > 1:
-                    headers = lines[0].split('\t')
-                    rows = []
-                    for line in lines[1:]:
-                        values = line.split('\t')
-                        row = {}
-                        for i, header in enumerate(headers):
-                            row[header.strip()] = values[i] if i < len(values) else ''
-                        rows.append(row)
-                    processed_data.extend(rows)
-            elif '\n' in query_result and '\t' not in query_result:
-                # Handle single-column results with newline-separated header and value
-                lines = query_result.strip().split('\n')
-                if len(lines) == 2:  # Header and value
-                    header = lines[0].strip()
-                    value = lines[1].strip()
-                    if header and value:
-                        row = {header: value}
-                        processed_data.append(row)
-                elif len(lines) > 2:
-                    # Handle multiple lines without tabs
-                    header = "Result"
-                    value = query_result.strip()
-                    row = {header: value}
-                    processed_data.append(row)
-                else:
-                    # Single line result
-                    processed_data.append(query_result)
-            else:
-                # Handle single string results
-                row = {"Result": query_result}
-                processed_data.append(row)
-        else:
-            # Handle non-string results
-            processed_data.append(query_result)
+        # Use the data directly from the result (already structured)
+        processed_data = data if isinstance(data, list) else []
+        error_messages = result.get("error_messages", [])
         
         # Prepare the response
         response_data = {
@@ -112,7 +71,7 @@ async def run_multi_agent(request: QuestionRequest):
             "agent_system": "multi-agent-orchestration",
             "company_info": {
                 "company_code": request.company_code,
-                "country": request.company_name
+                "site_code": request.site_code
             }
         }
         
@@ -141,8 +100,12 @@ async def get_multi_agent_status():
             "description-agent"
         ],
         "available_tables": [
-            "Vw_GI_SalesDetails",
-            "Vw_GI_SalesSummary", 
-            "Vw_GI_CompanyMaster"
+            "Vw_SI_SalesDetails",
+            "Vw_SI_SalesSummary", 
+            "View_DiscountDetails",
+            "DayPartMst",
+            "PaperchaseCategoryMaster",
+            "MenuItemCategoryMst",
+            "RevenueCenterMst"
         ]
     }) 

@@ -25,9 +25,9 @@ The application is configured to connect to the following SQL Server database:
 ### Available Tables
 
 The application is configured to work with these specific tables:
-- `dbo.Vw_GI_SalesDetails` - Detailed sales transaction data
-- `dbo.Vw_GI_SalesSummary` - Summary sales data and metrics  
-- `dbo.Vw_GI_CompanyMaster` - Company and master data information
+- `dbo.Vw_SI_SalesDetails` - Detailed sales transaction data
+- `dbo.Vw_SI_SalesSummary` - Summary sales data and metrics  
+- `dbo.View_DiscountDetails` - Company and master data information
 
 ## Testing the Connection
 

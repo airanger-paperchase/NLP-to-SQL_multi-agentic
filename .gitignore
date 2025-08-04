@@ -201,9 +201,9 @@ dist-ssr
 
 
        
-Vw_GI_CompanyMaster 1.db
-Vw_GI_SalesDetails 1.db
-Vw_GI_SalesSummary 1.db
+View_DiscountDetails 1.db
+Vw_SI_SalesDetails 1.db
+Vw_SI_SalesSummary 1.db
 DataWarehouseV2_UK 1.xlsx
 
 sqldb.db

@@ -77,13 +77,13 @@ async def process_question(self, user_question: str):
 "Show me total sales by month"
 
 # Available tables:
-- Vw_GI_SalesDetails: Detailed sales transaction data
-- Vw_GI_SalesSummary: Summary sales data and metrics  
-- Vw_GI_CompanyMaster: Company and master data
+- Vw_SI_SalesDetails: Detailed sales transaction data
+- Vw_SI_SalesSummary: Summary sales data and metrics  
+- View_DiscountDetails: Company and master data
 
 # Router Agent decides:
 {
-    "selected_table": "Vw_GI_SalesSummary",
+    "selected_table": "Vw_SI_SalesSummary",
     "confidence": "high",
     "reasoning": "Question asks for totals and summaries"
 }
@@ -150,7 +150,7 @@ python test_multi_agent.py
 
 # Returns:
 {
-    "selected_table": "Vw_GI_SalesSummary",
+    "selected_table": "Vw_SI_SalesSummary",
     "confidence": "high", 
     "reasoning": "Question asks for totals and summaries"
 }
@@ -159,12 +159,12 @@ python test_multi_agent.py
 ### **Step 2: Table Context Retrieval**
 ```python
 # TableDataManager gets:
-# - Schema: All columns from Vw_GI_SalesSummary
+# - Schema: All columns from Vw_SI_SalesSummary
 # - Sample Data: 5 sample records
 # - Business Context: "Contains aggregated sales information..."
 
 table_context = {
-    'table_name': 'Vw_GI_SalesSummary',
+    'table_name': 'Vw_SI_SalesSummary',
     'schema': [...],  # All columns
     'sample_data': [...],  # 5 sample records
     'business_context': 'Contains aggregated sales information...'
@@ -181,7 +181,7 @@ table_context = {
 
 # Generates SQL:
 "SELECT TOP 20 Month, SUM(TotalAmount) as TotalSales 
- FROM dbo.Vw_GI_SalesSummary 
+ FROM dbo.Vw_SI_SalesSummary 
  GROUP BY Month 
  ORDER BY Month"
 ```
@@ -219,15 +219,15 @@ PASSWORD=your_password
 ```python
 # In multi_agent_orchestrator.py
 self.table_configs = {
-    'Vw_GI_SalesDetails': {
+    'Vw_SI_SalesDetails': {
         'description': 'Detailed sales transaction data...',
         'business_context': 'Contains granular sales data...'
     },
-    'Vw_GI_SalesSummary': {
+    'Vw_SI_SalesSummary': {
         'description': 'Summary sales data and metrics',
         'business_context': 'Contains aggregated sales information...'
     },
-    'Vw_GI_CompanyMaster': {
+    'View_DiscountDetails': {
         'description': 'Company and master data information',
         'business_context': 'Contains company details...'
     }

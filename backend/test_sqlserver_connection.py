@@ -33,7 +33,7 @@ try:
     print(f"Connection test result: {result}")
     
     # Test querying the available tables
-    tables = ['Vw_GI_SalesDetails', 'Vw_GI_SalesSummary', 'Vw_GI_CompanyMaster']
+    tables = ['Vw_SI_SalesDetails', 'Vw_SI_SalesSummary', 'View_DiscountDetails']
     
     for table in tables:
         try:

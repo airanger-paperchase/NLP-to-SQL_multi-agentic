@@ -11,8 +11,8 @@ from backend import fetch_latest_v2_from_cosmos
 from app.core.config import AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_KEY
 
 # SQLite Database paths
-SALES_DETAILS_DB = "Vw_GI_SalesDetails 1.db"
-SALES_SUMMARY_DB = "Vw_GI_SalesSummary 1.db"
+SALES_DETAILS_DB = "Vw_SI_SalesDetails 1.db"
+SALES_SUMMARY_DB = "Vw_SI_SalesSummary 1.db"
 
 class GetSchemaPlugin:
     def __init__(self) -> None:
@@ -30,11 +30,11 @@ class GetSchemaPlugin:
                     conn = sqlite3.connect(self.sales_details_db)
                     cur = conn.cursor()
                     
-                    # Get schema for Vw_GI_SalesDetails table
-                    cur.execute("PRAGMA table_info(Vw_GI_SalesDetails);")
+                    # Get schema for Vw_SI_SalesDetails table
+                    cur.execute("PRAGMA table_info(Vw_SI_SalesDetails);")
                     columns = cur.fetchall()
                     for col in columns:
-                        schema_info.append(f"Vw_GI_SalesDetails - {col[1]} ({col[2]})")
+                        schema_info.append(f"Vw_SI_SalesDetails - {col[1]} ({col[2]})")
                     
                     cur.close()
                     conn.close()
@@ -44,11 +44,11 @@ class GetSchemaPlugin:
                     conn = sqlite3.connect(self.sales_summary_db)
                     cur = conn.cursor()
                     
-                    # Get schema for Vw_GI_SalesSummary table
-                    cur.execute("PRAGMA table_info(Vw_GI_SalesSummary);")
+                    # Get schema for Vw_SI_SalesSummary table
+                    cur.execute("PRAGMA table_info(Vw_SI_SalesSummary);")
                     columns = cur.fetchall()
                     for col in columns:
-                        schema_info.append(f"Vw_GI_SalesSummary - {col[1]} ({col[2]})")
+                        schema_info.append(f"Vw_SI_SalesSummary - {col[1]} ({col[2]})")
                     
                     cur.close()
                     conn.close()
@@ -83,9 +83,9 @@ class QuerySQLitePlugin:
                 query = self.__clean_sql_query__(sql_query)
                 
                 # Determine which database to use based on the query
-                if "Vw_GI_SalesDetails" in query:
+                if "Vw_SI_SalesDetails" in query:
                     db_path = self.sales_details_db
-                elif "Vw_GI_SalesSummary" in query:
+                elif "Vw_SI_SalesSummary" in query:
                     db_path = self.sales_summary_db
                 else:
                     # Default to SalesDetails if no specific table mentioned
@@ -131,14 +131,14 @@ You are a domain-specific SQL assistant for Paperchase, a hospitality and restau
 
 You have access to two SQLite databases:
 
-1. Vw_GI_SalesDetails 1.db - Contains detailed sales transaction data
-   - Table: Vw_GI_SalesDetails
-2. Vw_GI_SalesSummary 1.db - Contains summarized sales data
-   - Table: Vw_GI_SalesSummary
+1. Vw_SI_SalesDetails 1.db - Contains detailed sales transaction data
+   - Table: Vw_SI_SalesDetails
+2. Vw_SI_SalesSummary 1.db - Contains summarized sales data
+   - Table: Vw_SI_SalesSummary
 
 COLUMNS OVERVIEW (based on the data samples provided):
 
-Vw_GI_SalesDetails Table:
+Vw_SI_SalesDetails Table:
 - CheckId: Transaction identifiers (e.g., 'K-2303617', 'TMC-1231', 'J-2406349')
 - Date: Transaction dates in DD-MM-YYYY format
 - Month: Full month names (e.g., 'July', 'March', 'December')
@@ -154,7 +154,7 @@ Vw_GI_SalesDetails Table:
 - CompanyCode: Company identifier
 - SiteCode: Site/location identifier
 
-Vw_GI_SalesSummary Table:
+Vw_SI_SalesSummary Table:
 - CheckId: Transaction identifiers
 - Date: Transaction dates
 - Month: Month names
@@ -172,8 +172,8 @@ Vw_GI_SalesSummary Table:
 
 SQL GENERATION RULES:
 - Always use appropriate database based on the query requirements
-- For detailed item-level analysis, use Vw_GI_SalesDetails table
-- For summary-level analysis, use Vw_GI_SalesSummary table
+- For detailed item-level analysis, use Vw_SI_SalesDetails table
+- For summary-level analysis, use Vw_SI_SalesSummary table
 - Use proper date formatting (DD-MM-YYYY) when filtering by dates
 - Always use appropriate data types (TEXT for dates, INTEGER for amounts)
 - Use LIKE for partial string matches in MenuItem, RevenueCenter, etc.

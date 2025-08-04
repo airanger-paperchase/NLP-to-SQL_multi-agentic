@@ -22,17 +22,33 @@ class TableDataManager:
     
     def __init__(self):
         self.table_configs = {
-            'Vw_GI_SalesDetails': {
-                'description': 'Detailed sales transaction data with individual line items',
-                'business_context': 'Contains granular sales data including individual items sold, quantities, prices, and transaction details'
+            'Vw_SI_SalesDetails': {
+                'description': 'Detailed sales transaction data with individual line items and category information',
+                'business_context': 'Contains granular sales data including individual items sold, quantities, prices, transaction details, and category data for analysis by categories, sub-categories, and item-level details'
             },
-            'Vw_GI_SalesSummary': {
-                'description': 'Summary sales data and metrics',
-                'business_context': 'Contains aggregated sales information, totals, and summary metrics for business analysis'
+            'Vw_SI_SalesSummary': {
+                'description': 'Summary sales data and metrics (no category information)',
+                'business_context': 'Contains aggregated sales information, totals, and summary metrics for business analysis. Does not include category or item-level details'
             },
-            'Vw_GI_CompanyMaster': {
+            'View_DiscountDetails': {
                 'description': 'Company and master data information',
                 'business_context': 'Contains company details, master data, and reference information'
+            },
+            'DayPartMst': {
+                'description': 'Day part master data with DayPartName',
+                'business_context': 'Contains day part information like Lunch, Dinner, All Day, etc.'
+            },
+            'PaperchaseCategoryMaster': {
+                'description': 'Paperchase category master data with PaperchaseCategoryName',
+                'business_context': 'Contains category information for menu items'
+            },
+            'MenuItemCategoryMst': {
+                'description': 'Menu item category master data with SubCategoryName',
+                'business_context': 'Contains sub-category information for menu items'
+            },
+            'RevenueCenterMst': {
+                'description': 'Revenue center master data with RevenueCenterName',
+                'business_context': 'Contains revenue center information like Restaurant, Bar, Terrace, etc.'
             }
         }
     
@@ -148,11 +164,17 @@ class RouterAgent:
         3. Choose the most appropriate table based on the question content
         4. If the question requires data from multiple tables, prioritize the main table
         5. Consider the business context of each table when making your decision
+        6. IMPORTANT: Questions about categories, sales by category, or category analysis should use Vw_SI_SalesDetails
+        7. Questions about totals and summaries without category detail should use Vw_SI_SalesSummary
         
         DECISION CRITERIA:
-        - Vw_GI_SalesDetails: Questions about individual items, line-level details, specific transactions
-        - Vw_GI_SalesSummary: Questions about totals, summaries, aggregated data, business metrics
-        - Vw_GI_CompanyMaster: Questions about company information, master data, reference data
+        - Vw_SI_SalesDetails: Questions about individual items, line-level details, specific transactions, categories, category analysis, sales by category, sub-categories, item-level analysis
+        - Vw_SI_SalesSummary: Questions about totals, summaries, aggregated data, business metrics (when no category or item-level detail is needed)
+        - View_DiscountDetails: Questions about company information, master data, reference data
+        - DayPartMst: Questions about day parts (Lunch, Dinner, All Day, etc.)
+        - PaperchaseCategoryMaster: Questions about categories and category names (standalone category queries)
+        - MenuItemCategoryMst: Questions about sub-categories and sub-category names (standalone sub-category queries)
+        - RevenueCenterMst: Questions about revenue centers and revenue center names (standalone revenue center queries)
         
         RESPONSE FORMAT:
         Return ONLY a JSON object with the following structure:
@@ -163,9 +185,19 @@ class RouterAgent:
         }}
         
         EXAMPLE RESPONSES:
-        - For "Show me total sales by month": {{"selected_table": "Vw_GI_SalesSummary", "confidence": "high", "reasoning": "Question asks for totals and summaries"}}
-        - For "What items were sold in transaction 123": {{"selected_table": "Vw_GI_SalesDetails", "confidence": "high", "reasoning": "Question asks for individual line items"}}
-        - For "Company information": {{"selected_table": "Vw_GI_CompanyMaster", "confidence": "high", "reasoning": "Question asks for company/master data"}}
+        - For "Show me total sales by month": {{"selected_table": "Vw_SI_SalesSummary", "confidence": "high", "reasoning": "Question asks for totals and summaries"}}
+        - For "What items were sold in transaction 123": {{"selected_table": "Vw_SI_SalesDetails", "confidence": "high", "reasoning": "Question asks for individual line items"}}
+        - For "What is the sale for each category for 2025": {{"selected_table": "Vw_SI_SalesDetails", "confidence": "high", "reasoning": "Question asks for sales by category, requires category analysis"}}
+        - For "Sales by category": {{"selected_table": "Vw_SI_SalesDetails", "confidence": "high", "reasoning": "Question asks for category-based analysis"}}
+        - For "Company information": {{"selected_table": "View_DiscountDetails", "confidence": "high", "reasoning": "Question asks for company/master data"}}
+        
+        KEYWORDS FOR ROUTING:
+        - "category", "categories", "by category", "sales by category" → Vw_SI_SalesDetails
+        - "sub-category", "subcategory", "by sub-category" → Vw_SI_SalesDetails
+        - "item", "items", "line items", "individual items" → Vw_SI_SalesDetails
+        - "total", "summary", "overview", "aggregated" (without category) → Vw_SI_SalesSummary
+        - "day part", "lunch", "dinner" → Vw_SI_SalesDetails or Vw_SI_SalesSummary
+        - "revenue center", "restaurant", "bar" → Vw_SI_SalesDetails or Vw_SI_SalesSummary
         
         USER QUESTION: {{user_question}}
         
@@ -212,34 +244,34 @@ class RouterAgent:
                 
                 # Default to SalesSummary if no clear match
                 default_decision = {
-                    "selected_table": "Vw_GI_SalesSummary",
+                    "selected_table": "Vw_SI_SalesSummary",
                     "confidence": "low",
                     "reasoning": "Default fallback"
                 }
-                print(f"🔄 ROUTER AGENT: Default fallback - Selected Table: Vw_GI_SalesSummary")
+                print(f"🔄 ROUTER AGENT: Default fallback - Selected Table: Vw_SI_SalesSummary")
                 return default_decision
                 
         except Exception as e:
             print(f"🔄 ROUTER AGENT: Error occurred: {e}")
             error_decision = {
-                "selected_table": "Vw_GI_SalesSummary",
+                "selected_table": "Vw_SI_SalesSummary",
                 "confidence": "low",
                 "reasoning": f"Error occurred: {str(e)}"
             }
-            print(f"🔄 ROUTER AGENT: Error fallback - Selected Table: Vw_GI_SalesSummary")
+            print(f"🔄 ROUTER AGENT: Error fallback - Selected Table: Vw_SI_SalesSummary")
             return error_decision
 
 class TableSpecialistAgent:
     """Specialized agent for a specific table"""
     
-    def __init__(self, table_name: str, table_context: dict, company_code: str = None, company_name: str = None):
+    def __init__(self, table_name: str, table_context: dict, company_code: str = None, site_code: str = None):
         self.table_name = table_name
         self.table_context = table_context
         self.company_code = company_code
-        self.company_name = company_name
+        self.site_code = site_code
         print(f"\n🔧 TABLE SPECIALIST AGENT: Created for table '{table_name}'")
         print(f"🔧 TABLE SPECIALIST AGENT: Company Code: {company_code}")
-        print(f"🔧 TABLE SPECIALIST AGENT: Country: {company_name}")
+        print(f"🔧 TABLE SPECIALIST AGENT: Site Code: {site_code}")
         print(f"🔧 TABLE SPECIALIST AGENT: Table description: {table_context.get('description', 'N/A')}")
         print(f"🔧 TABLE SPECIALIST AGENT: Business context: {table_context.get('business_context', 'N/A')}")
         print(f"🔧 TABLE SPECIALIST AGENT: Schema columns: {len(table_context.get('schema', []))}")
@@ -264,15 +296,31 @@ class TableSpecialistAgent:
         
         sample_data_str = json.dumps(self.table_context['sample_data'], indent=2, default=str)
         
-        # Company filter clause
+        # Company and Site filter clause - only apply if both company_code and site_code are provided
         company_filter = ""
-        if self.company_code:
+        if self.company_code and self.site_code:
+            company_filter = f"""
+            COMPANY AND SITE FILTER:
+            - Company Code: {self.company_code}
+            - Site Code: {self.site_code}
+            - Always filter by CompanyCode = '{self.company_code}' AND SiteCode = '{self.site_code}' in WHERE clause
+            - This ensures data is specific to the selected company and site: {self.company_code}/{self.site_code}
+            - For master tables (DayPartMst, PaperchaseCategoryMaster, MenuItemCategoryMst, RevenueCenterMst), always include CompanyCode and SiteCode filters
+            """
+        elif self.company_code and not self.site_code:
             company_filter = f"""
             COMPANY FILTER:
             - Company Code: {self.company_code}
-            - Country: {self.company_name or 'N/A'}
+            - Site Code: Not selected
             - Always filter by CompanyCode = '{self.company_code}' in WHERE clause
-            - This ensures data is specific to the selected company: {self.company_name or self.company_code}
+            - This ensures data is specific to the selected company: {self.company_code}
+            - For master tables, include CompanyCode filter
+            """
+        else:
+            company_filter = """
+            NO COMPANY/SITE FILTER:
+            - No company or site filters will be applied
+            - Query will return data for all companies and sites
             """
         
         return f"""
@@ -288,9 +336,7 @@ class TableSpecialistAgent:
         Description: {self.table_context['description']}
         Business Context: {self.table_context['business_context']}
 
-        COLUMNS OVERVIEW (based on the actual database schema):
-
-        {self.table_name} Table:
+        ACTUAL TABLE COLUMNS (based on real database schema):
         {chr(10).join(schema_info)}
 
         SAMPLE DATA (for reference):
@@ -304,7 +350,8 @@ class TableSpecialistAgent:
         # this table contains revenue data for restaurants  
         # always summarise data by grouping and only show required columns
         # average spend = spend per head  
-        # DayPart contains session/DayPart related values
+        # DayPart contains session/DayPart related values (Lunch, Dinner, All Day, etc.)
+        # RevenueCenter contains service locations (Restaurant, Bar, Terrace, Room Service, etc.)
         # if both SUM() and FORMAT() functions are used then never use FORMAT inside SUM. Always use sum inside FORMAT.
         # Example of Wrong Syntax : SUM(FORMAT(NetAmount, 'N0', 'en-GB'))
         # Example of Correct Syntax : FORMAT(SUM(NetAmount), 'N0', 'en-GB')
@@ -316,7 +363,8 @@ class TableSpecialistAgent:
         # Never use NULLIF() function
 
         ### SQL Constraints:
-        # CompanyCode = '{self.company_code}' (if provided)
+        {f"# CompanyCode = '{self.company_code}'" if self.company_code else "# No company filter"}
+        {f"# SiteCode = '{self.site_code}'" if self.site_code else "# No site filter"}
         # always use SQL Server query syntax
         # always use year column in select if its used in where condition
         # never use 'STR_TO_DATE' function as its not available for MSSQL
@@ -331,9 +379,9 @@ class TableSpecialistAgent:
         # never convert/cast cover column values to FLOAT.
         # never return Date column if group by data is asked in a query. In that case always apply 'GROUP BY' condition accordingly.
         # never name columns name as Formatted
-        # if only sales/revenue is asked then only return values from NetSales only and do not return any other columns
-        # if covers, average spend is asked then return NetSales, Covers, Average Spend columns only
-        # do not return GrossSales, DiscountAmount Columns if not requested
+        # if only sales/revenue is asked then only return values from NetAmount only and do not return any other columns
+        # if covers, average spend is asked then return NetAmount, Covers, Average Spend columns only
+        # do not return GrossAmount, DiscountAmount Columns if not requested
         # always convert date values in DATE format in a query
         # Date values are in format 'YYYY-mm-dd'
         # all revenue value columns have highest weightage for sort
@@ -349,9 +397,42 @@ class TableSpecialistAgent:
 
         ### SQL Column Values:   
         # Month column includes Month names January, February, March, April, May, June, July, August, September, October, November, December
+        # DayPart values: Lunch, Dinner, All Day, etc.
+        # RevenueCenter values: Restaurant, Bar, Terrace, Room Service, etc.
+
+        ### AVAILABLE COLUMNS FOR {self.table_name}:
+        # CheckId - Transaction identifier
+        # Date - Transaction date
+        # Month - Month name (January, February, etc.)
+        # Year - Year number
+        # DayPart - Time of day (Lunch, Dinner, All Day, etc.)
+        # RevenueCenter - Service location (Restaurant, Bar, Terrace, etc.)
+        # Covers - Number of people served
+        # GrossAmount - Gross transaction amount
+        # NetAmount - Net transaction amount
+        # DiscountAmount - Discount applied
+        # ServiceChargeAmount - Service charge
+        # HouseTipsAmount - House tips
+        # SiteCode - Site identifier
+        # CompanyCode - Company identifier
+        {f"# CategoryId - Category identifier (for joining with master tables)" if self.table_name == 'Vw_SI_SalesDetails' else "# CategoryId - Not available in this table"}
+
+        ### AVAILABLE MASTER TABLES FOR INNER JOIN:
+        # dbo.DayPartMst - Contains DayPartName (Lunch, Dinner, All Day, etc.)
+        # dbo.Vw_SI_CategoryDetails - Contains CategoryName (category names)
+        # dbo.MenuItemCategoryMst - Contains SubCategoryName (sub-category names)
+        # dbo.RevenueCenterMst - Contains RevenueCenterName (Restaurant, Bar, Terrace, etc.)
+        
+        IMPORTANT: Use Vw_SI_CategoryDetails for category joins instead of master tables.
+
+        ### INNER JOIN PATTERNS:
+        # When you need DayPartName: INNER JOIN dbo.DayPartMst dp ON main.DayPart = dp.DayPart
+        # When you need RevenueCenterName: INNER JOIN dbo.RevenueCenterMst rcm ON main.RevenueCenter = rcm.RevenueCenter
+        {f"# When you need CategoryName: INNER JOIN dbo.Vw_SI_CategoryDetails cd ON main.CategoryId = cd.CategoryId" if self.table_name == 'Vw_SI_SalesDetails' else "# CategoryName joins not available for this table (CategoryId column not present)"}
+        {f"# When you need SubCategoryName: INNER JOIN dbo.MenuItemCategoryMst micm ON main.CategoryId = micm.CategoryId" if self.table_name == 'Vw_SI_SalesDetails' else "# SubCategoryName joins not available for this table (CategoryId column not present)"}
 
         SQL GENERATION RULES:
-        - ALWAYS limit results to the latest 20 records using TOP 20 at the end of every query
+        - ALWAYS limit results to the latest 100 records using TOP 100 at the end of every query
         - Always use appropriate table based on the query requirements
         - Use proper date formatting (YYYY-MM-DD) when filtering by dates
         - Always use appropriate data types (DATETIME for dates, DECIMAL for amounts)
@@ -359,8 +440,16 @@ class TableSpecialistAgent:
         - For date ranges, use proper date comparison functions
         - Always include relevant columns in SELECT clause
         - Use appropriate aggregation functions (SUM, COUNT, AVG) for summary queries
-        - For aggregation queries, apply TOP 20 after ORDER BY clause
+        - For aggregation queries, apply TOP 100 after ORDER BY clause
         - Use proper SQL Server date functions (GETDATE(), DATEADD, DATEDIFF)
+        - When user asks for DayPartName, CategoryName, SubCategoryName, or RevenueCenterName, use INNER JOIN with master tables
+        - For DayPartName: INNER JOIN dbo.DayPartMst dp ON main.DayPart = dp.DayPart
+        - For RevenueCenterName: INNER JOIN dbo.RevenueCenterMst rcm ON main.RevenueCenter = rcm.RevenueCenter
+        {f"- For CategoryName: INNER JOIN dbo.Vw_SI_CategoryDetails cd ON main.CategoryId = cd.CategoryId" if self.table_name == 'Vw_SI_SalesDetails' else "- CategoryName joins not available for this table (CategoryId column not present)"}
+        {f"- For SubCategoryName: INNER JOIN dbo.MenuItemCategoryMst micm ON main.CategoryId = micm.CategoryId" if self.table_name == 'Vw_SI_SalesDetails' else "- SubCategoryName joins not available for this table (CategoryId column not present)"}
+        - CRITICAL: Use Vw_SI_CategoryDetails for category joins
+        - For CategoryName, always use dbo.Vw_SI_CategoryDetails table
+        - For SubCategoryName, always use dbo.MenuItemCategoryMst table
 
         SQL SERVER-SPECIFIC RULES:
         - Use TOP instead of LIMIT for row restriction
@@ -374,33 +463,61 @@ class TableSpecialistAgent:
         - Use proper SQL Server window functions when needed
 
         COMMON QUERY PATTERNS:
-        - Basic data retrieval: SELECT TOP 20 * FROM dbo.{self.table_name}
-        - Filtered queries: SELECT TOP 20 * FROM dbo.{self.table_name} WHERE ColumnName = 'Value'
-        - Aggregation queries: SELECT TOP 20 ColumnName, COUNT(*) FROM dbo.{self.table_name} GROUP BY ColumnName ORDER BY COUNT(*) DESC
-        - Date range queries: SELECT TOP 20 * FROM dbo.{self.table_name} WHERE Date BETWEEN '2024-01-01' AND '2024-12-31'
-        - JOIN queries: SELECT TOP 20 t1.Col1, t2.Col2 FROM dbo.{self.table_name} t1 LEFT JOIN dbo.Vw_GI_SalesDetails t2 ON t1.Id = t2.Id
+        - Basic data retrieval: SELECT TOP 100 * FROM dbo.{self.table_name}
+        - Filtered queries: SELECT TOP 100 * FROM dbo.{self.table_name} WHERE ColumnName = 'Value'
+        - Aggregation queries: SELECT TOP 100 ColumnName, COUNT(*) FROM dbo.{self.table_name} GROUP BY ColumnName ORDER BY COUNT(*) DESC
+        - Date range queries: SELECT TOP 100 * FROM dbo.{self.table_name} WHERE Date BETWEEN '2024-01-01' AND '2024-12-31'
+        - Sales by DayPart: SELECT TOP 100 DayPart, FORMAT(SUM(NetAmount), 'N0', 'en-GB') AS TotalSales FROM dbo.{self.table_name} GROUP BY DayPart ORDER BY TotalSales DESC
+        - Sales by RevenueCenter: SELECT TOP 100 RevenueCenter, FORMAT(SUM(NetAmount), 'N0', 'en-GB') AS TotalSales FROM dbo.{self.table_name} GROUP BY RevenueCenter ORDER BY TotalSales DESC
+        
+        INNER JOIN PATTERNS:
+        - Sales with DayPartName: SELECT TOP 100 main.DayPart, dp.DayPartName, FORMAT(SUM(main.NetAmount), 'N0', 'en-GB') AS TotalSales FROM dbo.{self.table_name} main INNER JOIN dbo.DayPartMst dp ON main.DayPart = dp.DayPart GROUP BY main.DayPart, dp.DayPartName ORDER BY TotalSales DESC
+        - Sales with RevenueCenterName: SELECT TOP 100 main.RevenueCenter, rcm.RevenueCenterName, FORMAT(SUM(main.NetAmount), 'N0', 'en-GB') AS TotalSales FROM dbo.{self.table_name} main INNER JOIN dbo.RevenueCenterMst rcm ON main.RevenueCenter = rcm.RevenueCenter GROUP BY main.RevenueCenter, rcm.RevenueCenterName ORDER BY TotalSales DESC
+        {f"- Sales with CategoryName: SELECT TOP 100 cd.CategoryName, FORMAT(SUM(main.NetAmount), 'N0', 'en-GB') AS TotalNetAmount, FORMAT(SUM(main.GrossAmount), 'N0', 'en-GB') AS TotalGrossAmount, FORMAT(SUM(main.DiscountAmount), 'N0', 'en-GB') AS TotalDiscountAmount, main.Year FROM dbo.{self.table_name} main INNER JOIN dbo.Vw_SI_CategoryDetails cd ON main.CategoryId = cd.CategoryId WHERE main.Year = 2025 AND main.CompanyCode = 'C1587' AND main.SiteCode = 'L2312' GROUP BY cd.CategoryName, main.Year ORDER BY TotalNetAmount DESC" if self.table_name == 'Vw_SI_SalesDetails' else "# CategoryName joins not available for this table"}
+        {f"- Sales with SubCategoryName: SELECT TOP 100 micm.SubCategoryName, FORMAT(SUM(main.NetAmount), 'N0', 'en-GB') AS TotalSales FROM dbo.{self.table_name} main INNER JOIN dbo.MenuItemCategoryMst micm ON main.CategoryId = micm.CategoryId GROUP BY micm.SubCategoryName ORDER BY TotalSales DESC" if self.table_name == 'Vw_SI_SalesDetails' else "# SubCategoryName joins not available for this table"}
 
         AVAILABLE TABLE:
         - dbo.{self.table_name}: {self.table_context['description']}
 
-        IMPORTANT: Every query MUST use TOP 20 to ensure only the latest/most relevant 20 records are returned.
+        MASTER TABLE QUERIES (for reference):
+        - DayPartName: SELECT DISTINCT DayPartName FROM dbo.DayPartMst WHERE CompanyCode='C1587' AND SiteCode='L2312'
+        - CategoryName: SELECT DISTINCT CategoryName FROM dbo.Vw_SI_CategoryDetails WHERE CompanyCode='C1587' AND SiteCode='L2312'
+        - SubCategoryName: SELECT DISTINCT SubCategoryName FROM dbo.MenuItemCategoryMst WHERE CompanyCode='C1587' AND SiteCode='L2312'
+        - RevenueCenterName: SELECT DISTINCT RevenueCenterName FROM dbo.RevenueCenterMst WHERE CompanyCode='C1587' AND SiteCode='L2312'
+
+        IMPORTANT: Every query MUST use TOP 100 to ensure only the latest/most relevant 100 records are returned.
 
         CRITICAL OUTPUT RULES:
         - Return ONLY SQL queries separated by semicolons
         - NO explanations, comments, markdown, or descriptive text
         - NO "Query 1:", "Query 2:", or similar labels
         - NO "###" headers or formatting
+        - NO bullet points, NO descriptions, NO analysis
         - ONLY pure SQL statements
         - Each query must end with a semicolon
         - Multiple queries should be separated by semicolons on the same line or different lines
+        - NEVER return data analysis or descriptions
+        - NEVER return formatted results or summaries
+        - ONLY return executable SQL code
+        
+        JOIN DECISION RULES:
+        - If user asks for DayPartName, CategoryName, SubCategoryName, or RevenueCenterName ALONE, use the direct master table queries
+        - If user asks for sales data WITH DayPartName, CategoryName, SubCategoryName, or RevenueCenterName, use INNER JOIN patterns
+        - Always use the company_code and site_code from the context when filtering master tables
+        - CategoryName and SubCategoryName joins are ONLY available for Vw_SI_SalesDetails table (requires CategoryId column)
+        - DayPartName and RevenueCenterName joins are available for all sales tables
+        - For CategoryName, use CategoryName column from dbo.Vw_SI_CategoryDetails table
+        - For SubCategoryName, use SubCategoryName column from dbo.MenuItemCategoryMst table
+        - For DayPartName, use DayPartName column from dbo.DayPartMst table
+        - For RevenueCenterName, use RevenueCenterName column from dbo.RevenueCenterMst table
 
         EXAMPLE CORRECT OUTPUT:
-        SELECT TOP 20 CheckId, Date, Month, Year FROM dbo.{self.table_name};
+        SELECT TOP 100 CheckId, Date, Month, Year FROM dbo.{self.table_name};
 
         EXAMPLE INCORRECT OUTPUT:
         To get data from the table, I will generate a query:
         ### Query: Fetch data from {self.table_name}
-        SELECT TOP 20 CheckId, Date, Month, Year FROM dbo.{self.table_name};
+        SELECT TOP 100 CheckId, Date, Month, Year FROM dbo.{self.table_name};
 
         INPUT JSON:
         {{user_question}}
@@ -408,7 +525,7 @@ class TableSpecialistAgent:
         SCHEMA DETAILS:
         {chr(10).join(schema_info)}
 
-        FINAL INSTRUCTION: Return ONLY SQL queries separated by semicolons. NO explanations, NO markdown, NO comments, NO descriptive text. ONLY SQL statements.
+        FINAL INSTRUCTION: Return ONLY SQL queries separated by semicolons. NO explanations, NO markdown, NO comments, NO descriptive text, NO analysis, NO summaries, NO bullet points. ONLY executable SQL statements that can be run directly against the database.
         """
 
 class QueryExecutorPlugin:
@@ -442,15 +559,21 @@ class QueryExecutorPlugin:
                 
                 if not rows:
                     print(f"🔍 QUERY EXECUTOR: No results found")
-                    return "No results found."
+                    return []
                 
-                result = "\t".join(columns) + "\n"
-                result += "\n".join("\t".join(str(val) for val in row) for row in rows)
-                print(f"🔍 QUERY EXECUTOR: Query completed successfully. Result length: {len(result)} characters")
+                # Convert to structured data (list of dictionaries)
+                result = []
+                for row in rows:
+                    row_dict = {}
+                    for i, column in enumerate(columns):
+                        row_dict[column] = str(row[i]) if row[i] is not None else ""
+                    result.append(row_dict)
+                
+                print(f"🔍 QUERY EXECUTOR: Query completed successfully. Found {len(result)} rows")
                 return result
             except Exception as e:
                 print(f"🔍 QUERY EXECUTOR: Error executing query: {e}")
-                return f"Error executing query: {e}"
+                return []
 
         return await asyncio.to_thread(run_query)
 
@@ -473,12 +596,12 @@ class MultiAgentOrchestrator:
             )
         )
     
-    async def process_question(self, user_question: str, company_code: str = None, company_name: str = None) -> dict:
+    async def process_question(self, user_question: str, company_code: str = None, site_code: str = None) -> dict:
         """Process a user question through the multi-agent system"""
         try:
             print(f"\n🚀 MULTI-AGENT ORCHESTRATOR: Starting to process question: '{user_question}'")
             print(f"🚀 MULTI-AGENT ORCHESTRATOR: Company Code: {company_code}")
-            print(f"🚀 MULTI-AGENT ORCHESTRATOR: Country: {company_name}")
+            print(f"🚀 MULTI-AGENT ORCHESTRATOR: Site Code: {site_code}")
             
             # Step 1: Route the question to appropriate table
             print(f"\n📋 STEP 1: ROUTING - Calling Router Agent...")
@@ -499,7 +622,7 @@ class MultiAgentOrchestrator:
             
             # Step 3: Create table specialist agent
             print(f"\n📋 STEP 3: TABLE SPECIALIST - Creating Table Specialist Agent...")
-            table_agent = TableSpecialistAgent(selected_table, table_context, company_code, company_name)
+            table_agent = TableSpecialistAgent(selected_table, table_context, company_code, site_code)
             print(f"✅ STEP 3: TABLE SPECIALIST - Table Specialist Agent created successfully")
             
             # Step 4: Generate SQL query
@@ -519,11 +642,25 @@ class MultiAgentOrchestrator:
             sql_query = QueryExecutorPlugin.__clean_sql_query__(sql_query)
             print(f"✅ STEP 4: SQL GENERATION - Cleaned SQL query: {sql_query}")
             
+            # Validate that the response is actually SQL and not descriptive text
+            if not sql_query.strip().upper().startswith('SELECT') and not sql_query.strip().upper().startswith('WITH'):
+                print(f"❌ STEP 4: SQL GENERATION - Error: Response is not valid SQL. Got: {sql_query[:100]}...")
+                return {
+                    "error": "Generated response is not valid SQL. Please try again.",
+                    "routing_decision": routing_result,
+                    "selected_table": selected_table,
+                    "raw_response": sql_query
+                }
+            
+            # Validate SQL query against actual table schema
+            valid_columns = [col['name'] for col in table_context['schema']]
+            print(f"✅ STEP 4: SQL GENERATION - Valid columns: {valid_columns}")
+            
             # Step 5: Execute the query
             print(f"\n📋 STEP 5: QUERY EXECUTION - Executing SQL query...")
             query_result = await self.query_executor.execute_query(sql_query)
             print(f"📋 STEP 5: QUERY EXECUTION - Query result length: {len(str(query_result))} characters")
-            print(f"📋 STEP 5: QUERY EXECUTION - Query result preview: {str(query_result)[:200]}...")
+            print(f"📋 STEP 5: QUERY EXECUTION - Query result preview: {str(query_result)[:100]}...")
             
             # Step 6: Generate description
             print(f"\n📋 STEP 6: DESCRIPTION - Generating business description...")
@@ -531,7 +668,7 @@ class MultiAgentOrchestrator:
                 query_result, sql_query, user_question
             )
             print(f"📋 STEP 6: DESCRIPTION - Description length: {len(description)} characters")
-            print(f"📋 STEP 6: DESCRIPTION - Description preview: {description[:200]}...")
+            print(f"📋 STEP 6: DESCRIPTION - Description preview: {description[:100]}...")
             
             print(f"\n🎉 MULTI-AGENT ORCHESTRATOR: All steps completed successfully!")
             
@@ -539,7 +676,7 @@ class MultiAgentOrchestrator:
                 "routing_decision": routing_result,
                 "selected_table": selected_table,
                 "sql_query": sql_query,
-                "query_result": query_result,
+                "data": query_result,
                 "description": description
             }
             
@@ -550,13 +687,23 @@ class MultiAgentOrchestrator:
                 "user_question": user_question
             }
     
-    async def generate_data_description(self, data: str, sql_query: str, user_question: str) -> str:
+    async def generate_data_description(self, data: list, sql_query: str, user_question: str) -> str:
         """Generate description of the data using o3-mini model with original system message"""
         try:
             print(f"📝 DESCRIPTION AGENT: Starting to generate description...")
-            print(f"📝 DESCRIPTION AGENT: Data length: {len(str(data))} characters")
+            print(f"📝 DESCRIPTION AGENT: Data type: {type(data)}")
+            print(f"📝 DESCRIPTION AGENT: Data rows: {len(data) if isinstance(data, list) else 'N/A'}")
             print(f"📝 DESCRIPTION AGENT: SQL query: {sql_query}")
             print(f"📝 DESCRIPTION AGENT: User question: {user_question}")
+            
+            # Convert structured data to string format for the description agent
+            if isinstance(data, list) and len(data) > 0:
+                # Convert list of dictionaries to tab-separated string
+                columns = list(data[0].keys())
+                data_str = "\t".join(columns) + "\n"
+                data_str += "\n".join("\t".join(str(row.get(col, "")) for col in columns) for row in data)
+            else:
+                data_str = "No data available"
             
             description_prompt = f"""
             You are a data analyst assistant for Paperchase, a hospitality and restaurant management company.
@@ -581,7 +728,7 @@ class MultiAgentOrchestrator:
             - Do not go into too much detail; keep it short and to the point
 
             DATA TO ANALYZE:
-            {data}
+            {data_str}
 
             SQL QUERY EXECUTED:
             {sql_query}
@@ -602,7 +749,7 @@ class MultiAgentOrchestrator:
                 plugins=[]
             )
             
-            result = await description_agent.get_response(messages=f"Analyze this data: {data}")
+            result = await description_agent.get_response(messages=f"Analyze this data: {data_str}")
             
             if result and result.content and result.content.content:
                 description = result.content.content.strip()
@@ -619,12 +766,12 @@ class MultiAgentOrchestrator:
             return "I don't have data for this query. Please try another question."
 
 # Main function to use the orchestrator
-async def run_multi_agent_system(question: str, company_code: str = None, company_name: str = None) -> dict:
+async def run_multi_agent_system(question: str, company_code: str = None, site_code: str = None) -> dict:
     """Main function to run the multi-agent system"""
     print(f"\n🎬 MULTI-AGENT SYSTEM: Starting multi-agent system...")
     print(f"🎬 MULTI-AGENT SYSTEM: Question received: '{question}'")
     print(f"🎬 MULTI-AGENT SYSTEM: Company Code: {company_code}")
-    print(f"🎬 MULTI-AGENT SYSTEM: Country: {company_name}")
+    print(f"🎬 MULTI-AGENT SYSTEM: Site Code: {site_code}")
     
     if not question or not question.strip():
         print(f"❌ MULTI-AGENT SYSTEM: Error - No question provided")
@@ -635,6 +782,6 @@ async def run_multi_agent_system(question: str, company_code: str = None, compan
     print(f"🎬 MULTI-AGENT SYSTEM: MultiAgentOrchestrator created successfully")
     print(f"🎬 MULTI-AGENT SYSTEM: Starting to process question...")
     
-    result = await orchestrator.process_question(question.strip(), company_code, company_name)
+    result = await orchestrator.process_question(question.strip(), company_code, site_code)
     print(f"🎬 MULTI-AGENT SYSTEM: Processing completed. Result keys: {list(result.keys())}")
     return result 
