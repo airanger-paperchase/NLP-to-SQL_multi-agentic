@@ -135,6 +135,12 @@ ENV/
 env.bak/
 venv.bak/
 
+
+app/core/test.ipynb
+test.ipynb
+backend/app/core/test.ipynb
+
+
 # Spyder project settings
 .spyderproject
 .spyproject
@@ -206,4 +212,4 @@ Vw_SI_SalesDetails 1.db
 Vw_SI_SalesSummary 1.db
 DataWarehouseV2_UK 1.xlsx
 
-sqldb.db
+sqldb.dbtest.ipynb

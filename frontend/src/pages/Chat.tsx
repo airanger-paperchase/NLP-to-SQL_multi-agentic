@@ -5,7 +5,7 @@ import { Link } from "react-router-dom";
 import PurchaseOrderChart from "../components/PurchaseOrderChart";
 import PurchaseOrderTable from "../components/PurchaseOrderTable";
 import data from '../PurchaseOrderTable.json';
-import { MessageCircle, BarChart3, Database, Loader2, ChevronDown } from 'lucide-react';
+import { MessageCircle, BarChart3, Database, Loader2, ChevronDown, Sparkles } from 'lucide-react';
 import type { ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import DatabaseTablesBox from "../components/DatabaseTablesBox";
@@ -349,8 +349,8 @@ const Chat = () => {
                 <div className="container mx-auto px-6 py-4">
                     <div className="flex justify-between items-center">
                         <div className="flex items-center gap-3">
-                            <MessageCircle className="h-8 w-8 text-[#BF2A2D]" />
-                            <h1 className="text-2xl font-bold text-[#163E5D]">Paperchase Chat Assistant</h1>
+                            <Sparkles className="h-8 w-8 text-[#BF2A2D]" />
+                            <h1 className="text-2xl font-bold text-[#163E5D]">Multi-Agent Platform</h1>
                         </div>
                         <div className="flex items-center gap-4">
                             {/* Company Selection Dropdown */}

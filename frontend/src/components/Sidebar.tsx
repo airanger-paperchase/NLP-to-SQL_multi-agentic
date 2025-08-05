@@ -86,7 +86,7 @@ const Sidebar = ({ onLinkClick }: SidebarProps) => {
             </ul>
             </nav>
             <div className="px-4 py-6 text-xs text-[#2F82C3] opacity-70 text-center">
-            &copy; {new Date().getFullYear()} Paperchase ERP Agent
+            &copy; {new Date().getFullYear()} Paperchase Multi-Agent Platform
             </div>
         </aside>
     );
