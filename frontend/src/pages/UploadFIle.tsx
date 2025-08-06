@@ -570,7 +570,7 @@ function UploadFile() {
                 <div className="container mx-auto px-6 py-4">
                     <div className="flex justify-between items-center">
                         <div className="flex items-center gap-3">
-                            <FileSpreadsheet className="h-8 w-8 text-[#BF2A2D]" />
+                            <FileSpreadsheet className="h-8 w-8 text-purple-800" />
                             <h1 className="text-2xl font-bold text-[#163E5D]">Excel Data Processing</h1>
                         </div>
                         <Link to='/'>
@@ -635,7 +635,7 @@ function UploadFile() {
                 <Card className="shadow-lg border-1 bg-white/95 backdrop-blur-sm">
                     <CardHeader>
                         <CardTitle className="flex items-center gap-3">
-                            <FileSpreadsheet className="h-6 w-6 text-[#BF2A2D]" />
+                            <FileSpreadsheet className="h-6 w-6 text-purple-800" />
                             Process Steps
                         </CardTitle>
                     </CardHeader>
@@ -656,7 +656,7 @@ function UploadFile() {
                     <Card className="shadow-lg border-1 bg-white/95 backdrop-blur-sm">
                         <CardHeader>
                             <CardTitle className="flex items-center gap-3">
-                                <UploadCloud className="h-12 w-12 text-purple-800" />
+                                <UploadCloud className="h-8 w-8 text-purple-800" />
                                 File Upload
                             </CardTitle>
                         </CardHeader>
@@ -714,7 +714,7 @@ function UploadFile() {
                     <Card className="shadow-lg border-1 bg-white/95 backdrop-blur-sm">
                         <CardHeader>
                             <CardTitle className="flex items-center gap-3">
-                                <Database className="h-6 w-6 text-[#BF2A2D]" />
+                                <Database className="h-6 w-6 text-purple-800" />
                                 Database Setup
                             </CardTitle>
                         </CardHeader>
@@ -769,7 +769,7 @@ function UploadFile() {
                     <Card className="shadow-lg border-1 bg-white/95 backdrop-blur-sm">
                         <CardHeader>
                             <CardTitle className="flex items-center gap-3">
-                                <CheckCircle className="h-6 w-6 text-[#BF2A2D]" />
+                                <CheckCircle className="h-6 w-6 text-purple-800" />
                                 Status
                             </CardTitle>
                         </CardHeader>
@@ -818,7 +818,7 @@ function UploadFile() {
                     <Card className="shadow-lg border-1 bg-white/95 backdrop-blur-sm">
                         <CardHeader>
                             <CardTitle className="flex items-center gap-3">
-                                <AlertCircle className="h-6 w-6 text-[#BF2A2D]" />
+                                <AlertCircle className="h-6 w-6 text-purple-800" />
                                 Column Analysis
                             </CardTitle>
                         </CardHeader>
@@ -890,7 +890,7 @@ function UploadFile() {
                     <Card className="shadow-lg border-1 bg-white/95 backdrop-blur-sm">
                         <CardHeader>
                             <CardTitle className="flex items-center gap-3">
-                                <Database className="h-6 w-6 text-[#BF2A2D]" />
+                                <Database className="h-6 w-6 text-purple-800" />
                                 Preprocessed Data Preview
                                 <Badge className="bg-green-100 text-green-800 ml-auto">Preprocessed</Badge>
                             </CardTitle>
@@ -959,7 +959,7 @@ function UploadFile() {
                         <CardHeader>
                             <div className="flex items-center justify-between w-full">
                                 <CardTitle className="flex items-center gap-3">
-                                    <Database className="h-6 w-6 text-[#BF2A2D]" />
+                                    <Database className="h-6 w-6 text-purple-800" />
                                     Uploaded Data Preview
                                     <Badge className="bg-green-100 text-green-800 ml-auto">Ingested</Badge>
                                 </CardTitle>
