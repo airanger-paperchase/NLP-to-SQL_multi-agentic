@@ -166,6 +166,7 @@ class RouterAgent:
         5. Consider the business context of each table when making your decision
         6. IMPORTANT: Questions about categories, sales by category, or category analysis should use Vw_SI_SalesDetails
         7. Questions about totals and summaries without category detail should use Vw_SI_SalesSummary
+        8. If the user's question is a simple greeting (e.g., "hi", "hello"), output 'GREETING'.
         
         DECISION CRITERIA:
         - Vw_SI_SalesDetails: Questions about individual items, line-level details, specific transactions, categories, category analysis, sales by category, sub-categories, item-level analysis
@@ -174,6 +175,7 @@ class RouterAgent:
         - DayPartMst: Questions about day parts (Lunch, Dinner, All Day, etc.)
         - PaperchaseCategoryMaster: Questions about categories and category names (standalone category queries)
         - MenuItemCategoryMst: Questions about sub-categories and sub-category names (standalone sub-category queries)
+        - GREETING: For simple greetings like 'hi' or 'hello'.
         - RevenueCenterMst: Questions about revenue centers and revenue center names (standalone revenue center queries)
         
         RESPONSE FORMAT:
