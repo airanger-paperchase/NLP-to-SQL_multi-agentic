@@ -291,7 +291,7 @@ const PurchaseOrderChart = ({ data }: { data: DynamicData[] }) => {
                         />
                         <Bar 
                             dataKey={yAxisKey} 
-                            fill="#BF2A2D" 
+                            fill="#6b21a8" 
                             radius={[4, 4, 0, 0]}
                         />
                     </BarChart>

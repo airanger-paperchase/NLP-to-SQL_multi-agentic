@@ -73,8 +73,8 @@ const Sidebar = ({ onLinkClick }: SidebarProps) => {
                         className={`
                         flex items-center px-4 py-3 rounded-lg font-semibold transition-all
                         ${isActive
-                            ? "bg-gradient-to-r from-[#BF2A2D] to-[#BF2A2D] text-white shadow-md"
-                            : "text-[#163E5D] hover:bg-gradient-to-r hover:from-[#2F82C3]/10 hover:to-[#163E5D]/10 hover:text-[#BF2A2D]"
+                            ? "bg-gradient-to-br from-purple-800 via-purple-900 to-purple-950 shadow-xl text-white rounded-lg font-medium shadow-soft hover:shadow-medium transition-all duration-200 transform hover:scale-105"
+                            : "text-[#163E5D] hover:bg-gradient-to-r hover:from-[#2F82C3]/10 hover:to-[#163E5D]/10 hover:text-purple-800"
                         }
                         `}
                     >

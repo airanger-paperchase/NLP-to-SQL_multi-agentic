@@ -14,10 +14,10 @@ const Button = React.forwardRef<
   }
 >(({ className, variant = 'default', size = 'default', ...props }, ref) => {
   const variants = {
-    default: "bg-gradient-to-r from-[#BF2A2D] to-[#BF2A2D] hover:from-[#2F82C3] hover:to-[#163E5D] text-white",
-    outline: "border-2 border-[#BF2A2D] text-[#BF2A2D] hover:bg-[#BF2A2D] hover:text-white",
+    default: "bg-gradient-to-br from-purple-800 via-purple-900 to-purple-950 shadow-xl text-white rounded-lg font-medium shadow-soft hover:shadow-medium transition-all duration-200 transform hover:scale-105",
+    outline: "border-2 border-purple-800 text-purple-800 hover:bg-purple-800 hover:text-white",
     destructive: "bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white",
-    secondary: "bg-gradient-to-r from-[#2F82C3] to-[#163E5D] hover:from-[#BF2A2D] hover:to-[#BF2A2D] text-white"
+    secondary: "bg-gradient-to-r from-[#2F82C3] to-[#163E5D] hover:from-purple-800 hover:to-purple-900 text-white"
   };
 
   const sizes = {
@@ -121,7 +121,7 @@ function SqlQueryExecutor() {
                 <div className="container mx-auto px-6 py-4">
                     <div className="flex justify-between items-center">
                         <div className="flex items-center gap-3">
-                            <Database className="h-8 w-8 text-[#BF2A2D]" />
+                            <Database className="h-8 w-8 text-purple-800" />
                             <h1 className="text-2xl font-bold text-[#163E5D]">SQL Query Executor</h1>
                         </div>
                         <Link to='/'>
@@ -168,7 +168,7 @@ function SqlQueryExecutor() {
                                     <select
                                         value={selectedTable}
                                         onChange={(e) => setSelectedTable(e.target.value)}
-                                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#BF2A2D] focus:border-transparent"
+                                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-800 focus:border-transparent"
                                     >
                                         <option value="">Choose a table...</option>
                                         {tables.map((table, index) => (
@@ -187,7 +187,7 @@ function SqlQueryExecutor() {
                                         value={query}
                                         onChange={(e) => setQuery(e.target.value)}
                                         placeholder="Enter your SQL query here..."
-                                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#BF2A2D] focus:border-transparent h-32 resize-none"
+                                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-800 focus:border-transparent h-32 resize-none"
                                     />
                                 </div>
 

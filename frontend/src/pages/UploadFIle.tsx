@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import * as XLSX from "xlsx";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-import { Upload, Database, FileSpreadsheet, CheckCircle, AlertCircle, Loader2, Check, ChevronDown } from "lucide-react";
+import { UploadCloud, Database, FileSpreadsheet, CheckCircle, AlertCircle, Loader2, Check, ChevronDown } from "lucide-react";
 import background from '../assets/windmills-snowy-landscape.jpg';
 import Logo from '../assets/logo-paperchase.png';
 import { Link, useNavigate } from "react-router";
@@ -56,7 +56,7 @@ const Button = ({
     
     const variants = {
         default: "bg-blue-600 text-white hover:bg-blue-700",
-        destructive: "bg-red-600 text-white hover:bg-red-700",
+        destructive: "bg-gradient-to-br from-purple-800 via-purple-900 to-purple-950 shadow-xl text-white rounded-lg font-medium shadow-soft hover:shadow-medium transition-all duration-200 transform hover:scale-105",
         outline: "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
         secondary: "bg-gray-100 text-gray-900 hover:bg-gray-200",
         ghost: "hover:bg-accent hover:text-accent-foreground",
@@ -98,10 +98,16 @@ const Select = ({ children, value, onValueChange }: {
     onValueChange: (value: string) => void; 
 }) => {
     const [isOpen, setIsOpen] = useState(false);
+
+    const handleSelect = (selectedValue: string) => {
+        onValueChange(selectedValue);
+        setIsOpen(false);
+    };
     
     return (
         <div className="relative">
             <button
+                type="button"
                 className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                 onClick={() => setIsOpen(!isOpen)}
             >
@@ -111,7 +117,12 @@ const Select = ({ children, value, onValueChange }: {
             {isOpen && (
                 <div className="absolute top-full left-0 right-0 z-50 mt-1 max-h-96 overflow-hidden rounded-md border bg-white shadow-md">
                     <div className="p-1">
-                        {children}
+                        {React.Children.map(children, (child) => {
+                            if (React.isValidElement(child)) {
+                                return React.cloneElement(child as React.ReactElement<any>, { onSelect: handleSelect });
+                            }
+                            return child;
+                        })}
                     </div>
                 </div>
             )}
@@ -122,11 +133,11 @@ const Select = ({ children, value, onValueChange }: {
 const SelectItem = ({ value, children, onSelect }: { 
     value: string; 
     children: React.ReactNode; 
-    onSelect: (value: string) => void; 
+    onSelect?: (value: string) => void; 
 }) => (
     <div
         className="relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none hover:bg-accent hover:text-accent-foreground"
-        onClick={() => onSelect(value)}
+        onClick={() => onSelect?.(value)}
     >
         <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
             <Check className="h-4 w-4" />
@@ -155,9 +166,9 @@ const AlertDescription = ({ className, children, ...props }: React.HTMLAttribute
 
 const Badge = ({ className, variant = "default", children, ...props }: React.HTMLAttributes<HTMLDivElement> & { variant?: "default" | "secondary" | "destructive" | "outline" }) => {
     const variants = {
-        default: "border-transparent bg-blue-600 text-white hover:bg-blue-700",
+        default: "border-transparent bg-[#6c5ce7] text-white hover:bg-[#7a6bcf]",
         secondary: "border-transparent bg-gray-100 text-gray-900 hover:bg-gray-200",
-        destructive: "border-transparent bg-red-600 text-white hover:bg-red-700",
+        destructive: "border-transparent bg-gradient-to-br from-purple-800 via-purple-900 to-purple-950 shadow-xl text-white rounded-lg font-medium shadow-soft hover:shadow-medium transition-all duration-200 transform hover:scale-105",
         outline: "text-foreground",
     };
     
@@ -206,7 +217,7 @@ const Checkbox = ({
     </label>
 );
 
-function UploadFile({ isSidebarOpen }: { isSidebarOpen: boolean }) {
+function UploadFile() {
     const [preprocessedData, setPreprocessedData] = useState<any[]>([]);
     const [data, setData] = useState<(string | number)[][]>([]);
     const [loading, setLoading] = useState(false);
@@ -262,7 +273,9 @@ function UploadFile({ isSidebarOpen }: { isSidebarOpen: boolean }) {
 
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
-        if (!file) return;
+        if (!file) {
+            return;
+        }
 
         setFileName(file.name);
         setLoading(true);
@@ -499,9 +512,15 @@ function UploadFile({ isSidebarOpen }: { isSidebarOpen: boolean }) {
     };
 
     const getStepStatus = (step: number) => {
-        if (step === 1) return fileName ? 'completed' : 'current';
-        if (step === 2) return preprocessedData.length > 0 ? 'completed' : fileName ? 'current' : 'pending';
-        if (step === 3) return (selectedDatabase && tableName && preprocessedData.length > 0) ? 'current' : 'pending';
+        if (step === 1) {
+            return fileName ? 'completed' : 'current';
+        }
+        if (step === 2) {
+            return preprocessedData.length > 0 ? 'completed' : fileName ? 'current' : 'pending';
+        }
+        if (step === 3) {
+            return (selectedDatabase && tableName && preprocessedData.length > 0) ? 'current' : 'pending';
+        }
         return 'pending';
     };
 
@@ -637,7 +656,7 @@ function UploadFile({ isSidebarOpen }: { isSidebarOpen: boolean }) {
                     <Card className="shadow-lg border-1 bg-white/95 backdrop-blur-sm">
                         <CardHeader>
                             <CardTitle className="flex items-center gap-3">
-                                <Upload className="h-6 w-6 text-[#BF2A2D]" />
+                                <UploadCloud className="h-12 w-12 text-purple-800" />
                                 File Upload
                             </CardTitle>
                         </CardHeader>
@@ -706,7 +725,7 @@ function UploadFile({ isSidebarOpen }: { isSidebarOpen: boolean }) {
                                 </label>
                                 <Select value={selectedDatabase} onValueChange={setSelectedDatabase}>
                                     {databases.map((db) => (
-                                        <SelectItem key={db} value={db} onSelect={setSelectedDatabase}>
+                                        <SelectItem key={db} value={db}>
                                             {db}
                                         </SelectItem>
                                     ))}

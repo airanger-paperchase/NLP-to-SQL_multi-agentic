@@ -5,7 +5,7 @@ import { Link } from "react-router-dom";
 import PurchaseOrderChart from "../components/PurchaseOrderChart";
 import PurchaseOrderTable from "../components/PurchaseOrderTable";
 import data from '../PurchaseOrderTable.json';
-import { MessageCircle, BarChart3, Database, Loader2, ChevronDown, Sparkles } from 'lucide-react';
+import { MessageCircle, BarChart3, Database, Loader2, ChevronDown, Sparkles, UserIcon, HomeIcon } from 'lucide-react';
 import type { ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import DatabaseTablesBox from "../components/DatabaseTablesBox";
@@ -345,36 +345,37 @@ const Chat = () => {
             style={{ backgroundImage: `url(${background})` }}
         >
             {/* Header */}
-            <div className="bg-white/90 backdrop-blur-sm shadow-lg border-b border-gray-200 relative z-50">
+            <div className="bg-gradient-to-b from-[#F5F7FA] to-[#E4E9F2]
+            border-r border-[#163E5D]/20 shadow-xl text-white font-medium sticky top-0 z-50">
                 <div className="container mx-auto px-6 py-4">
                     <div className="flex justify-between items-center">
                         <div className="flex items-center gap-3">
-                            <Sparkles className="h-8 w-8 text-[#BF2A2D]" />
-                            <h1 className="text-2xl font-bold text-[#163E5D]">Multi-Agent Platform</h1>
+                            <Sparkles className="h-8 w-8 text-purple-950" />
+                            <h1 className="text-2xl font-bold text-purple-950">Multi-Agent Platform</h1>
                         </div>
                         <div className="flex items-center gap-4">
                             {/* Company Selection Dropdown */}
                             <div className="relative company-dropdown z-[9999]">
                                 <button
                                     onClick={() => setShowCompanyDropdown(!showCompanyDropdown)}
-                                    className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#BF2A2D] focus:border-transparent"
+                                    className="flex items-center gap-2 px-4 py-2 bg-gradient-to-br from-purple-800 via-purple-900 to-purple-950 rounded-lg shadow-sm hover:bg-purple-800/20 focus:outline-none focus:ring-2 focus:ring-purple-800"
                                 >
-                                    <span className="text-sm font-medium text-gray-700">
+                                    <span className="text-sm font-medium text-white">
                                         {selectedCompany ? `${selectedCompany.companyCode}` : 'Select Company'}
                                     </span>
-                                    <ChevronDown className="h-4 w-4 text-gray-500" />
+                                    <ChevronDown className="h-4 w-4 text-white" />
                                 </button>
                                 
                                 {showCompanyDropdown && (
-                                    <div className="absolute right-0 mt-2 w-64 bg-white border border-gray-300 rounded-lg shadow-xl z-[9999] max-h-60 overflow-y-auto">
+                                    <div className="absolute right-0 mt-2 w-64 bg-gray-200 shadow-xl text-gray-950 rounded-lg font-medium shadow-soft z-[9999] max-h-60 overflow-y-auto">
                                         {/* Search Input */}
-                                        <div className="sticky top-0 bg-white p-2 border-b border-gray-200">
+                                        <div className="sticky top-0 bg-gray-200/50 p-2 border-b border-gray-200/20">
                                             <input
                                                 type="text"
-                                                placeholder="Search country or code..."
+                                                placeholder="Search company code..."
                                                 value={companySearchTerm}
                                                 onChange={(e) => setCompanySearchTerm(e.target.value)}
-                                                className="w-full px-3 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#BF2A2D] focus:border-transparent"
+                                                className="w-full px-3 py-1 text-sm bg-transparent text-gray-950 border border-gray-300/30 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300 focus:border-transparent placeholder-gray-950/70"
                                                 onClick={(e) => e.stopPropagation()}
                                             />
                                         </div>
@@ -390,11 +391,11 @@ const Chat = () => {
                                                         setShowCompanyDropdown(false);
                                                         setCompanySearchTerm(""); // Clear search when selecting
                                                     }}
-                                                    className={`w-full text-left px-4 py-2 hover:bg-gray-300 hover:text-gray-700 ${
-                                                        selectedCompany?.companyCode === company.companyCode 
-                                                            ? 'bg-[#BF2A2D] text-white' 
-                                                            : 'text-gray-700'
-                                                    }`}
+                                                    className={`w-full text-left px-4 py-2 hover:bg-purple-950/20 transition-colors duration-200 hover:text-black ${
+                                                          selectedCompany?.companyCode === company.companyCode 
+                                                             ? 'bg-purple-950 font-bold text-white '
+                                                             : ''
+                                                      }`}
                                                 >
                                                     <div className="font-medium">{company.companyCode}</div>
                                                     <div className="text-xs">Site: {company.siteCode}</div>
@@ -414,10 +415,10 @@ const Chat = () => {
                                 <button
                                     onClick={() => setShowSiteDropdown(!showSiteDropdown)}
                                     disabled={!selectedCompany}
-                                    className={`flex items-center gap-2 px-4 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#BF2A2D] focus:border-transparent ${
+                                    className={`flex items-center gap-2 px-4 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-800 transition-colors duration-200 ${
                                         selectedCompany 
-                                            ? 'bg-white border-gray-300 hover:bg-gray-50' 
-                                            : 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed'
+                                            ? 'bg-gradient-to-br from-purple-800 via-purple-900 to-purple-950 border-purple-800 hover:bg-purple-800/20 text-white' 
+                                            : 'bg-white/10 border-white/50 text-white/50 cursor-not-allowed'
                                     }`}
                                 >
                                     <span className="text-sm font-medium">
@@ -427,15 +428,15 @@ const Chat = () => {
                                 </button>
                                 
                                 {showSiteDropdown && selectedCompany && (
-                                    <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-300 rounded-lg shadow-xl z-[9999] max-h-60 overflow-y-auto">
+                                    <div className="absolute right-0 mt-2 w-64 bg-gray-200 shadow-xl text-gray-950 rounded-lg font-medium shadow-soft z-[9999] max-h-60 overflow-y-auto">
                                         {/* Search Input */}
-                                        <div className="sticky top-0 bg-white p-2 border-b border-gray-200">
+                                        <div className="sticky top-0 bg-gray-200/50 p-2 border-b border-gray-200/20">
                                             <input
                                                 type="text"
                                                 placeholder="Search site code..."
                                                 value={siteSearchTerm}
                                                 onChange={(e) => setSiteSearchTerm(e.target.value)}
-                                                className="w-full px-3 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#BF2A2D] focus:border-transparent"
+                                                className="w-full px-3 py-1 text-sm bg-transparent text-gray-950 border border-gray-300/30 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300 focus:border-transparent placeholder-gray-950/70"
                                                 onClick={(e) => e.stopPropagation()}
                                             />
                                         </div>
@@ -450,11 +451,11 @@ const Chat = () => {
                                                         setShowSiteDropdown(false);
                                                         setSiteSearchTerm(""); // Clear search when selecting
                                                     }}
-                                                    className={`w-full text-left px-4 py-2 hover:bg-gray-100 hover:text-gray-700 ${
-                                                        selectedSite?.siteCode === site.siteCode 
-                                                            ? 'bg-[#BF2A2D] text-white' 
-                                                            : 'text-gray-700'
-                                                    }`}
+                                                    className={`w-full text-left px-4 py-2 hover:bg-purple-950/20 transition-colors duration-200 hover:text-black ${
+                                                           selectedSite?.siteCode === site.siteCode 
+                                                             ? 'bg-purple-950 font-bold text-white '
+                                                              : ''
+                                                       }`}
                                                 >
                                                     <div className="font-medium">Site {site.siteCode}</div>
                                                     <div className="text-xs">{site.companyCode}</div>
@@ -469,7 +470,7 @@ const Chat = () => {
                                 )}
                             </div>
                             
-                            <Link to='/'>
+                            {/* <Link to='/'>
                                 <img 
                                     src={Logo} 
                                     alt="Logo" 
@@ -477,6 +478,9 @@ const Chat = () => {
                                     height={106} 
                                     className="hover:scale-105 transition-transform duration-200" 
                                 />
+                            </Link> */}
+                            <Link to='/'>
+                                <HomeIcon className="h-8 w-8 text-purple-950 ml-10" />
                             </Link>
                         </div>
                     </div>
@@ -494,7 +498,7 @@ const Chat = () => {
                     <Card className="lg:col-span-2 shadow-lg border-1 h-[calc(100vh-200px)]">
                         <CardHeader>
                             <CardTitle className="flex items-center gap-3">
-                                <BarChart3 className="h-6 w-6 text-[#BF2A2D]" />
+                                <BarChart3 className="h-6 w-6 text-purple-800" />
                                 Data visualization
                             </CardTitle>
                         </CardHeader>
@@ -507,7 +511,7 @@ const Chat = () => {
                     <Card className="shadow-lg border-1 flex flex-col h-[calc(100vh-200px)]">
                         <CardHeader>
                             <CardTitle className="flex items-center gap-3">
-                                <MessageCircle className="h-6 w-6 text-[#BF2A2D]" />
+                                <MessageCircle className="h-6 w-6 text-purple-800" />
                                 Chat Assistant
                             </CardTitle>
                         </CardHeader>
@@ -522,7 +526,7 @@ const Chat = () => {
                                             <div
                                                 className={`max-w-[90%] px-4 py-2 rounded-lg ${
                                                     message.role === "user"
-                                                        ? "bg-[#BF2A2D] text-white ml-auto"
+                                                        ? "bg-gradient-to-br from-purple-800 via-purple-900 to-purple-950 shadow-xl text-white rounded-lg font-medium shadow-soft ml-auto"
                                                         : "bg-gray-100 border text-gray-800"
                                                 }`}
                                             >
@@ -579,7 +583,7 @@ const Chat = () => {
                 <Card className="shadow-lg border-1">
                     <CardHeader>
                         <CardTitle className="flex items-center gap-3">
-                            <Database className="h-6 w-6 text-[#BF2A2D]" />
+                            <Database className="h-6 w-6 text-purple-800" />
                             Tabulated data
                         </CardTitle>
                     </CardHeader>
@@ -593,7 +597,7 @@ const Chat = () => {
             {/* Chat Input Box - Same Width as Tabulated Data */}
             <div className="sticky bottom-8 left-[calc(16rem+2rem)] right-8">
                 <div className="container mx-auto px-4">
-                    <div className="max-w-7xl mx-auto p-4 bg-[#ededed] border-1 border-gray-600 rounded-full shadow-lg flex gap-2 hover:border-[#BF2A2D] transition-colors duration-300">
+                    <div className="max-w-7xl mx-auto p-4 bg-[#ededed] border-1 border-gray-600 rounded-full shadow-lg flex gap-2 hover:border-purple-800 transition-colors duration-300">
                     <textarea
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
@@ -605,7 +609,7 @@ const Chat = () => {
                     <button
                         onClick={handleSend}
                         disabled={isLoading}
-                        className="bg-[linear-gradient(90deg,#BF2A2D_0%,#BF2A2D_100%)] hover:bg-[linear-gradient(90deg,#2F82C3_0%,#163E5D_100%)] transition-[background-image] duration-500 ease-in-out text-white py-[10px] px-[24px] rounded-full"
+                        className="bg-gradient-to-br from-purple-800 via-purple-900 to-purple-950 hover:bg-[linear-gradient(90deg,#2F82C3_0%,#163E5D_100%)] transition-[background-image] duration-500 ease-in-out text-white py-[10px] px-[24px] rounded-full"
                     >
                         {isLoading ? (
                             <Loader2 className="w-5 h-5 animate-spin" />

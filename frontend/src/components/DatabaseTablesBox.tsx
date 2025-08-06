@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Database, Server, Loader2, AlertCircle, CheckSquare } from "lucide-react";
+import { Database, Server, Loader2, AlertCircle } from "lucide-react";
 import { cn } from "../pages/DatabaseForm"; // reuse your cn utility
 
 const Card = ({ className, children, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
@@ -44,9 +44,13 @@ export default function DatabaseTablesBox({ onSelectionChange }: DatabaseTablesB
       try {
         const res = await fetch("/api/list_all_database");
         const data = await res.json();
-        if (!res.ok) throw new Error(data.detail || "Failed to fetch databases");
+        if (!res.ok) {
+          throw new Error(data.detail || "Failed to fetch databases");
+        }
         setDatabases(data.databases || []);
-        if (data.databases?.length) setSelectedDatabase(data.databases[0]);
+        if (data.databases?.length) {
+          setSelectedDatabase(data.databases[0]);
+        }
       } catch (err: any) {
         setMessage(err.message || "Failed to fetch databases");
       }
@@ -65,9 +69,13 @@ export default function DatabaseTablesBox({ onSelectionChange }: DatabaseTablesB
     fetch(`/api/list_all_tables?db_name=${selectedDatabase}`)
       .then(res => res.json().then(data => ({ ok: res.ok, data })))
       .then(({ ok, data }) => {
-        if (!ok) throw new Error(data.detail || "Failed to fetch tables");
+        if (!ok) {
+          throw new Error(data.detail || "Failed to fetch tables");
+        }
         setTables(data.tables || []);
-        if (!data.tables?.length) setMessage("No tables found in this database.");
+        if (!data.tables?.length) {
+          setMessage("No tables found in this database.");
+        }
       })
       .catch(err => setMessage(err.message || "Failed to fetch tables"))
       .finally(() => setLoadingTables(false));
@@ -89,7 +97,7 @@ export default function DatabaseTablesBox({ onSelectionChange }: DatabaseTablesB
     <Card className="w-full mb-6">
       <CardHeader>
         <CardTitle className="flex items-center gap-3">
-          <Database className="h-6 w-6 text-[#BF2A2D]" />
+          <Database className="h-6 w-6 text-purple-800" />
           Database & Tables
         </CardTitle>
       </CardHeader>
@@ -103,7 +111,7 @@ export default function DatabaseTablesBox({ onSelectionChange }: DatabaseTablesB
                 Database
               </label>
               <select
-                className="rounded-lg border px-4 py-2 text-sm focus:ring-2 focus:ring-[#BF2A2D]"
+                className="rounded-lg border px-4 py-2 text-sm focus:ring-2 focus:ring-purple-800"
                 value={selectedDatabase}
                 onChange={e => setSelectedDatabase(e.target.value)}
               >
@@ -129,7 +137,7 @@ export default function DatabaseTablesBox({ onSelectionChange }: DatabaseTablesB
               </div>
               {tables.length > 0 && (
                 <button
-                  className="text-sm px-3 py-1 rounded bg-[#BF2A2D] text-white hover:bg-[#a82325] transition"
+                  className="text-sm px-3 py-1 rounded bg-gradient-to-br from-purple-800 via-purple-900 to-purple-950 text-white transition"
                   type="button"
                   onClick={() => {
                     if (selectedTables.length === tables.length) {
@@ -162,7 +170,7 @@ export default function DatabaseTablesBox({ onSelectionChange }: DatabaseTablesB
                     <label key={idx} className="flex items-center gap-2 cursor-pointer whitespace-nowrap">
                       <input
                         type="checkbox"
-                        className="accent-[#BF2A2D]"
+                        className="accent-purple-800"
                         checked={selectedTables.includes(table)}
                         onChange={() => {
                           setSelectedTables(selectedTables.includes(table)

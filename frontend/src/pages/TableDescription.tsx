@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
-import { Database, Edit2, Save, AlertCircle, Loader2, CheckCircle, Sparkles } from "lucide-react";
+
+import { Database, Save, AlertCircle, Loader2, CheckCircle, Sparkles } from "lucide-react";
 import background from '../assets/windmills-snowy-landscape.jpg';
 import Logo from '../assets/logo-paperchase.png';
 import { Link, useNavigate } from "react-router";
@@ -70,10 +70,10 @@ const Button = React.forwardRef<
     }
 >(({ className, variant = 'default', size = 'default', ...props }, ref) => {
     const variants = {
-        default: "bg-gradient-to-r from-[#BF2A2D] to-[#BF2A2D] hover:from-[#2F82C3] hover:to-[#163E5D] text-white",
-        outline: "border-2 border-[#BF2A2D] text-[#BF2A2D] hover:bg-[#BF2A2D] hover:text-white",
+        default: "bg-gradient-to-br from-purple-800 via-purple-900 to-purple-950 shadow-xl text-white rounded-lg font-medium shadow-soft hover:shadow-medium transition-all duration-200 transform hover:scale-105",
+        outline: "border-2 border-purple-800 text-purple-800 hover:bg-purple-800 hover:text-white",
         destructive: "bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white",
-        secondary: "bg-gradient-to-r from-[#2F82C3] to-[#163E5D] hover:from-[#BF2A2D] hover:to-[#BF2A2D] text-white"
+        secondary: "bg-gradient-to-r from-[#2F82C3] to-[#163E5D] hover:from-purple-800 hover:to-purple-900 text-white"
     };
     
     const sizes = {
