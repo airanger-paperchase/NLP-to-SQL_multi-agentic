@@ -7,7 +7,7 @@ from semantic_kernel.connectors.ai.open_ai import AzureChatCompletion
 from semantic_kernel.functions.kernel_function_decorator import kernel_function
 from semantic_kernel.agents import ChatCompletionAgent
 # Removed fetch_latest_v2_from_cosmos dependency
-from core.config import AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_KEY, API_VERSION_GA
+from core.config import AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_KEY, API_VERSION_GA, SERVER, DATABASE, USERNAME, PASSWORD, AZURE_OPENAI_DEPLOYMENT_NAME, AZURE_OPENAI_DEPLOYMENT_NAME_DESCRIPTION
 
 # Dynamic database detection - No hardcoded paths needed!
 def get_workspace_databases():
@@ -302,7 +302,7 @@ class QuerySQLitePlugin:
 kernel = Kernel()
 kernel.add_service(
     AzureChatCompletion(
-        deployment_name="gpt-4o",
+        deployment_name=AZURE_OPENAI_DEPLOYMENT_NAME,
         endpoint=AZURE_OPENAI_ENDPOINT,
         api_key=AZURE_OPENAI_KEY
     )
@@ -312,7 +312,7 @@ kernel.add_service(
 kernel_mini = Kernel()
 kernel_mini.add_service(
     AzureChatCompletion(
-        deployment_name="o3-mini",
+        deployment_name=AZURE_OPENAI_DEPLOYMENT_NAME_DESCRIPTION,
         endpoint=AZURE_OPENAI_ENDPOINT,
         api_key=AZURE_OPENAI_KEY,
         api_version=API_VERSION_GA

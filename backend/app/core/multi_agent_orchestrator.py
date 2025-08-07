@@ -6,7 +6,7 @@ from semantic_kernel import Kernel
 from semantic_kernel.connectors.ai.open_ai import AzureChatCompletion
 from semantic_kernel.functions.kernel_function_decorator import kernel_function
 from semantic_kernel.agents import ChatCompletionAgent
-from core.config import AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_KEY, API_VERSION_GA, SERVER, DATABASE, USERNAME, PASSWORD
+from core.config import AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_KEY, API_VERSION_GA, SERVER, DATABASE, USERNAME, PASSWORD, AZURE_OPENAI_DEPLOYMENT_NAME, AZURE_OPENAI_DEPLOYMENT_NAME_DESCRIPTION
 
 # SQL Server connection configuration
 def get_sql_server_connection_string():
@@ -137,7 +137,7 @@ class RouterAgent:
         self.kernel = Kernel()
         self.kernel.add_service(
             AzureChatCompletion(
-                deployment_name="gpt-4o",
+                deployment_name=AZURE_OPENAI_DEPLOYMENT_NAME,
                 endpoint=AZURE_OPENAI_ENDPOINT,
                 api_key=AZURE_OPENAI_KEY
             )
@@ -282,7 +282,7 @@ class TableSpecialistAgent:
         self.kernel = Kernel()
         self.kernel.add_service(
             AzureChatCompletion(
-                deployment_name="gpt-4o",
+                deployment_name=AZURE_OPENAI_DEPLOYMENT_NAME,
                 endpoint=AZURE_OPENAI_ENDPOINT,
                 api_key=AZURE_OPENAI_KEY
             )
@@ -613,7 +613,7 @@ class MultiAgentOrchestrator:
         self.description_kernel = Kernel()
         self.description_kernel.add_service(
             AzureChatCompletion(
-                deployment_name="o3-mini",
+                deployment_name=AZURE_OPENAI_DEPLOYMENT_NAME,
                 endpoint=AZURE_OPENAI_ENDPOINT,
                 api_key=AZURE_OPENAI_KEY,
                 api_version=API_VERSION_GA
@@ -655,7 +655,7 @@ class MultiAgentOrchestrator:
                 kernel=table_agent.kernel,
                 name=f"{selected_table}SQLAgent",
                 instructions=table_agent.generate_table_prompt(),
-                plugins=[self.query_executor]
+                plugins=[]
             )
             print(f"📋 STEP 4: SQL GENERATION - SQL Agent created, sending question to GPT-4o...")
             sql_result = await sql_agent.get_response(messages=user_question)
